@@ -1,6 +1,7 @@
 import type {
   Basics,
   BulletId,
+  Entry,
   EntryId,
   ItemPool,
   SectionId,
@@ -67,9 +68,12 @@ function copyBasics(basics: Basics): Basics {
  *   "this variant has not been touched", and the pool holds far more content
  *   than any one resume should print. Whoever creates content is responsible
  *   for adding it to the master composition.
- * - IDs that no longer resolve are skipped rather than thrown on. A stale ID
- *   in a selection list is a data-repair problem, not a reason to fail
- *   rendering the rest of a resume.
+ * - IDs that no longer resolve are skipped rather than thrown on, as are IDs
+ *   that resolve but belong to a different parent — a selection list cannot
+ *   move an entry into another section or a bullet into another entry. A stale
+ *   or foreign ID is a data-repair problem, not a reason to fail rendering the
+ *   rest of a resume. A duplicate ID in one list renders once, keeping the
+ *   first occurrence.
  *
  * Pass a composition that has already been through `resolveComposition`;
  * this function does no inheritance of its own.
@@ -115,19 +119,24 @@ function buildEntries(
   sectionId: SectionId,
 ): RenderEntry[] {
   const entries: RenderEntry[] = []
+  const seen = new Set<EntryId>()
 
   for (const entryId of composition.entrySelection[sectionId] ?? []) {
+    if (seen.has(entryId)) continue
     const entry = pool.entries[entryId]
-    if (!entry) continue
+    // A selection cannot change where an entry lives: an id that resolves to an
+    // entry in another section is skipped, same as one that does not resolve.
+    if (!entry || entry.sectionId !== sectionId) continue
 
     const rendered: RenderEntry = {
       id: entryId,
       title: textOverrides[entryId] ?? entry.title,
-      bullets: buildBullets(pool, composition, textOverrides, entryId),
+      bullets: buildBullets(pool, composition, textOverrides, entry),
     }
     if (entry.subtitle !== undefined) rendered.subtitle = entry.subtitle
     if (entry.period !== undefined) rendered.period = { ...entry.period }
 
+    seen.add(entryId)
     entries.push(rendered)
   }
 
@@ -138,14 +147,19 @@ function buildBullets(
   pool: ItemPool,
   composition: ResumeComposition,
   textOverrides: TextOverrides,
-  entryId: EntryId,
+  entry: Entry,
 ): RenderBullet[] {
   const bullets: RenderBullet[] = []
+  const owned = new Set<BulletId>(entry.bulletIds)
+  const seen = new Set<BulletId>()
 
-  for (const bulletId of composition.bulletSelection[entryId] ?? []) {
+  for (const bulletId of composition.bulletSelection[entry.id] ?? []) {
+    if (seen.has(bulletId)) continue
     const bullet = pool.bullets[bulletId]
-    if (!bullet) continue
+    // A selection cannot move a bullet to an entry that does not own it.
+    if (!bullet || !owned.has(bulletId)) continue
 
+    seen.add(bulletId)
     bullets.push({ id: bulletId, text: textOverrides[bulletId] ?? bullet.text })
   }
 

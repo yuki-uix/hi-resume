@@ -13,6 +13,11 @@ import { buildRenderModel } from './render-model'
 // Every expected value below is written out by hand. Nothing in this file calls
 // `buildRenderModel` or `resolveComposition` to work out what the result should be.
 
+/** Look a section up by id, not by position: the fixture's order can change. */
+function sectionOf(model: ReturnType<typeof buildRenderModel>, id: string) {
+  return model.sections.find((section) => section.id === id)
+}
+
 describe('buildRenderModel', () => {
   it('projects the master resume into the exact structure a template consumes', () => {
     const model = buildRenderModel(createItemPool(), createMasterComposition())
@@ -178,14 +183,14 @@ describe('buildRenderModel', () => {
     it('gives a text-layout section its body and no entries, and leaves entries sections without text', () => {
       const model = buildRenderModel(createItemPool(), createMasterComposition())
 
-      const summary = model.sections[0]
+      const summary = sectionOf(model, SECTION.summary)
       expect(summary?.layout).toBe('text')
       expect(summary?.text).toBe(
         'Product engineer with eight years building tools people use daily.',
       )
       expect(summary?.entries).toEqual([])
 
-      const work = model.sections[1]
+      const work = sectionOf(model, SECTION.work)
       expect(work?.layout).toBe('entries')
       expect(work?.text).toBeUndefined()
       expect(work?.entries.length).toBeGreaterThan(0)
@@ -218,7 +223,7 @@ describe('buildRenderModel', () => {
       ])
 
       const model = buildRenderModel(pool, createMasterComposition())
-      const acme = model.sections[1]?.entries[0]
+      const acme = sectionOf(model, SECTION.work)?.entries[0]
 
       expect(acme?.id).toBe('ent_acme')
       expect(acme?.bullets).toEqual([
@@ -232,7 +237,7 @@ describe('buildRenderModel', () => {
       delete composition.bulletSelection[ENTRY.beacon]
 
       const model = buildRenderModel(createItemPool(), composition)
-      const beacon = model.sections[2]?.entries[1]
+      const beacon = sectionOf(model, SECTION.project)?.entries[1]
 
       expect(beacon?.id).toBe('ent_beacon')
       expect(beacon?.bullets).toEqual([])
@@ -246,7 +251,7 @@ describe('buildRenderModel', () => {
         [BULLET.acme1]: 'Rebuilt billing on an event-sourced ledger.',
       })
 
-      expect(model.sections[1]?.entries[0]).toEqual({
+      expect(sectionOf(model, SECTION.work)?.entries[0]).toEqual({
         id: 'ent_acme',
         title: 'Staff Product Engineer',
         subtitle: 'Acme Corp',
@@ -259,7 +264,7 @@ describe('buildRenderModel', () => {
       })
 
       // A sibling entry the override did not name is untouched.
-      expect(model.sections[1]?.entries[1]).toEqual({
+      expect(sectionOf(model, SECTION.work)?.entries[1]).toEqual({
         id: 'ent_globex',
         title: 'Product Engineer',
         subtitle: 'Globex',
@@ -278,8 +283,10 @@ describe('buildRenderModel', () => {
 
       // `textOverrides` overrides the body text, never the title — the title
       // is `sectionTitles`' job.
-      expect(model.sections[0]?.title).toBe('个人简介')
-      expect(model.sections[0]?.text).toBe('Backend-leaning engineer focused on payments.')
+      expect(sectionOf(model, SECTION.summary)?.title).toBe('个人简介')
+      expect(sectionOf(model, SECTION.summary)?.text).toBe(
+        'Backend-leaning engineer focused on payments.',
+      )
     })
 
     it('does not rename sections — that is what sectionTitles is for', () => {
@@ -289,8 +296,8 @@ describe('buildRenderModel', () => {
 
       // `sec_work` is an entries section, so a text override keyed by its id
       // neither renames it nor gives it a body.
-      expect(model.sections[1]?.title).toBe('工作经验')
-      expect(model.sections[1]?.text).toBeUndefined()
+      expect(sectionOf(model, SECTION.work)?.title).toBe('工作经验')
+      expect(sectionOf(model, SECTION.work)?.text).toBeUndefined()
     })
   })
 
@@ -318,11 +325,11 @@ describe('buildRenderModel', () => {
         'sec_project',
         'sec_skill',
       ])
-      expect(model.sections[2]?.entries.map((entry) => entry.id)).toEqual([
+      expect(sectionOf(model, SECTION.project)?.entries.map((entry) => entry.id)).toEqual([
         'ent_atlas',
         'ent_beacon',
       ])
-      expect(model.sections[1]?.entries[1]?.bullets.map((bullet) => bullet.id)).toEqual([
+      expect(sectionOf(model, SECTION.work)?.entries[1]?.bullets.map((bullet) => bullet.id)).toEqual([
         'bul_globex_1',
         'bul_globex_2',
       ])
@@ -334,8 +341,64 @@ describe('buildRenderModel', () => {
 
       const model = buildRenderModel(createItemPool(), composition)
 
-      expect(model.sections[3]?.id).toBe('sec_skill')
-      expect(model.sections[3]?.entries).toEqual([])
+      expect(sectionOf(model, SECTION.skill)?.id).toBe('sec_skill')
+      expect(sectionOf(model, SECTION.skill)?.entries).toEqual([])
+    })
+  })
+
+  describe('ownership', () => {
+    it('does not render an entry under a section it does not belong to', () => {
+      const composition = createMasterComposition()
+      // `ent_atlas` belongs to `sec_project`; selecting it under `sec_work`
+      // must not move it there.
+      composition.entrySelection[SECTION.work] = [ENTRY.acme, ENTRY.atlas, ENTRY.initech]
+
+      const model = buildRenderModel(createItemPool(), composition)
+
+      expect(sectionOf(model, SECTION.work)?.entries.map((entry) => entry.id)).toEqual([
+        'ent_acme',
+        'ent_initech',
+      ])
+    })
+
+    it('does not render a bullet under an entry that does not own it', () => {
+      const composition = createMasterComposition()
+      // `bul_acme_1` is owned by `ent_acme`; selecting it under `ent_initech`
+      // must not move it there.
+      composition.bulletSelection[ENTRY.initech] = [BULLET.initech1, BULLET.acme1]
+
+      const model = buildRenderModel(createItemPool(), composition)
+      const initech = sectionOf(model, SECTION.work)?.entries.find(
+        (entry) => entry.id === ENTRY.initech,
+      )
+
+      expect(initech?.bullets.map((bullet) => bullet.id)).toEqual(['bul_initech_1'])
+    })
+  })
+
+  describe('duplicate ids', () => {
+    it('renders a duplicated entry id once, keeping its first position', () => {
+      const composition = createMasterComposition()
+      composition.entrySelection[SECTION.work] = [ENTRY.globex, ENTRY.acme, ENTRY.globex]
+
+      const model = buildRenderModel(createItemPool(), composition)
+
+      expect(sectionOf(model, SECTION.work)?.entries.map((entry) => entry.id)).toEqual([
+        'ent_globex',
+        'ent_acme',
+      ])
+    })
+
+    it('renders a duplicated bullet id once, keeping its first position', () => {
+      const composition = createMasterComposition()
+      composition.bulletSelection[ENTRY.acme] = [BULLET.acme3, BULLET.acme1, BULLET.acme3]
+
+      const model = buildRenderModel(createItemPool(), composition)
+      const acme = sectionOf(model, SECTION.work)?.entries.find(
+        (entry) => entry.id === ENTRY.acme,
+      )
+
+      expect(acme?.bullets.map((bullet) => bullet.id)).toEqual(['bul_acme_3', 'bul_acme_1'])
     })
   })
 
@@ -369,7 +432,7 @@ describe('buildRenderModel', () => {
 
       const model = buildRenderModel(createItemPool(), composition)
 
-      expect(model.sections[1]?.entries).toStrictEqual(remainingWorkEntries)
+      expect(sectionOf(model, SECTION.work)?.entries).toStrictEqual(remainingWorkEntries)
     })
 
     it('leaves the surrounding entries untouched when it is deleted from the pool', () => {
@@ -378,7 +441,7 @@ describe('buildRenderModel', () => {
 
       const model = buildRenderModel(pool, createMasterComposition())
 
-      expect(model.sections[1]?.entries).toStrictEqual(remainingWorkEntries)
+      expect(sectionOf(model, SECTION.work)?.entries).toStrictEqual(remainingWorkEntries)
     })
   })
 

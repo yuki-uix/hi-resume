@@ -7,10 +7,13 @@ import type { TextOverrides, Workspace } from './types'
  * Zod schema for the workspace JSON, which is the portable backup format and
  * therefore the one place untrusted data enters the app.
  *
- * What it checks is structure and identity, not referential integrity: a
- * selection list may reference an entry that no longer exists. The render
- * model already skips stale IDs on purpose, and rejecting a whole backup over
- * one dangling reference would turn a cosmetic problem into data loss.
+ * It checks structure, identity, and referential integrity. A selection list
+ * may not name the same id twice, nor an id whose owner is some other parent
+ * (an entry under a section it does not belong to, a bullet under an entry
+ * that does not own it). A *dangling* id — one not present in the pool at all
+ * — is accepted: the render model already skips stale IDs on purpose, and
+ * rejecting a whole backup over one dangling reference would turn a cosmetic
+ * problem into data loss.
  */
 
 export const CURRENT_SCHEMA_VERSION = 1
@@ -147,6 +150,81 @@ export const workspaceSettingsSchema = z.object({
   staleAfterDays: z.number().int().positive().optional(),
 })
 
+/** The pool fields a referential-integrity check needs, typed loosely so the
+ * branded id records can be handed over without per-field casts. */
+type IntegrityPool = {
+  entries: Record<string, { sectionId: string; bulletIds: string[] } | undefined>
+  bullets: Record<string, unknown>
+}
+
+/** A composition or a variant's partial composition, reduced to its selection lists. */
+type IntegritySelection = {
+  entrySelection?: Record<string, string[]>
+  bulletSelection?: Record<string, string[]>
+}
+
+type SelectionIssue = { path: (string | number)[]; message: string }
+
+/**
+ * Selection lists may choose and order, but they may not change what an id
+ * belongs to nor name the same id twice. A dangling id — one absent from the
+ * pool — is not an issue: the render model skips it, and rejecting it here
+ * would make a backup with one broken reference unimportable.
+ */
+function selectionIntegrityIssues(
+  pool: IntegrityPool,
+  selection: IntegritySelection,
+  basePath: (string | number)[],
+): SelectionIssue[] {
+  const issues: SelectionIssue[] = []
+
+  for (const [sectionId, entryIds] of Object.entries(selection.entrySelection ?? {})) {
+    const seen = new Set<string>()
+    for (const entryId of entryIds) {
+      if (seen.has(entryId)) {
+        issues.push({
+          path: [...basePath, 'entrySelection', sectionId],
+          message: `duplicate entry id "${entryId}"`,
+        })
+        continue
+      }
+      seen.add(entryId)
+
+      const entry = pool.entries[entryId]
+      if (entry && entry.sectionId !== sectionId) {
+        issues.push({
+          path: [...basePath, 'entrySelection', sectionId],
+          message: `entry "${entryId}" belongs to section "${entry.sectionId}", not "${sectionId}"`,
+        })
+      }
+    }
+  }
+
+  for (const [entryId, bulletIds] of Object.entries(selection.bulletSelection ?? {})) {
+    const entry = pool.entries[entryId]
+    const seen = new Set<string>()
+    for (const bulletId of bulletIds) {
+      if (seen.has(bulletId)) {
+        issues.push({
+          path: [...basePath, 'bulletSelection', entryId],
+          message: `duplicate bullet id "${bulletId}"`,
+        })
+        continue
+      }
+      seen.add(bulletId)
+
+      if (entry && pool.bullets[bulletId] !== undefined && !entry.bulletIds.includes(bulletId)) {
+        issues.push({
+          path: [...basePath, 'bulletSelection', entryId],
+          message: `bullet "${bulletId}" does not belong to entry "${entryId}"`,
+        })
+      }
+    }
+  }
+
+  return issues
+}
+
 export const workspaceSchema = z
   .object({
     schemaVersion: z.number().int().positive(),
@@ -171,6 +249,25 @@ export const workspaceSchema = z
           })
         }
       }
+    }
+
+    const addIntegrityIssues = (selection: IntegritySelection, path: (string | number)[]) => {
+      for (const issue of selectionIntegrityIssues(
+        workspace.pool as unknown as IntegrityPool,
+        selection,
+        path,
+      )) {
+        ctx.addIssue({ code: 'custom', ...issue })
+      }
+    }
+
+    addIntegrityIssues(workspace.master as unknown as IntegritySelection, ['master'])
+    for (const [index, variant] of workspace.variants.entries()) {
+      addIntegrityIssues(variant.composition as unknown as IntegritySelection, [
+        'variants',
+        index,
+        'composition',
+      ])
     }
   })
 

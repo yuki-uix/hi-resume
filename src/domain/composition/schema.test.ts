@@ -103,6 +103,84 @@ describe('parseWorkspace', () => {
     })
   })
 
+  describe('referential integrity', () => {
+    it('rejects an entry selected under a section it does not belong to', () => {
+      const raw = rawWorkspace()
+      raw.master.entrySelection.sec_work = ['ent_acme', 'ent_atlas', 'ent_initech']
+
+      expect(expectErrors(raw)).toEqual([
+        'master.entrySelection.sec_work: entry "ent_atlas" belongs to section "sec_project", not "sec_work"',
+      ])
+    })
+
+    it('rejects a bullet selected under an entry that does not own it', () => {
+      const raw = rawWorkspace()
+      raw.master.bulletSelection.ent_initech = ['bul_initech_1', 'bul_acme_1']
+
+      expect(expectErrors(raw)).toEqual([
+        'master.bulletSelection.ent_initech: bullet "bul_acme_1" does not belong to entry "ent_initech"',
+      ])
+    })
+
+    it('rejects a duplicated entry id in a selection list', () => {
+      const raw = rawWorkspace()
+      raw.master.entrySelection.sec_work = ['ent_acme', 'ent_globex', 'ent_acme']
+
+      expect(expectErrors(raw)).toEqual([
+        'master.entrySelection.sec_work: duplicate entry id "ent_acme"',
+      ])
+    })
+
+    it('rejects a duplicated bullet id in a selection list', () => {
+      const raw = rawWorkspace()
+      raw.master.bulletSelection.ent_acme = ['bul_acme_3', 'bul_acme_1', 'bul_acme_3']
+
+      expect(expectErrors(raw)).toEqual([
+        'master.bulletSelection.ent_acme: duplicate bullet id "bul_acme_3"',
+      ])
+    })
+
+    it('rejects an ownership violation inside a variant composition', () => {
+      const raw = rawWorkspace()
+      raw.variants = [
+        {
+          id: 'var_acme',
+          name: 'Acme',
+          composition: { entrySelection: { sec_work: ['ent_atlas'] } },
+          textOverrides: {},
+          application: { status: 'applied', events: [] },
+          createdAt: '2026-08-01T08:00:00.000Z',
+          updatedAt: '2026-08-01T08:00:00.000Z',
+        },
+      ]
+
+      expect(expectErrors(raw)).toEqual([
+        'variants.0.composition.entrySelection.sec_work: entry "ent_atlas" belongs to section "sec_project", not "sec_work"',
+      ])
+    })
+
+    it('accepts a selection pointing at an entry that does not exist', () => {
+      const raw = rawWorkspace()
+      raw.master.entrySelection.sec_work = ['ent_acme', 'ent_gone', 'ent_initech']
+
+      expect(parseWorkspace(raw).ok).toBe(true)
+    })
+
+    it('accepts a selection pointing at a bullet that does not exist', () => {
+      const raw = rawWorkspace()
+      raw.master.bulletSelection.ent_acme = ['bul_acme_3', 'bul_gone']
+
+      expect(parseWorkspace(raw).ok).toBe(true)
+    })
+
+    it('accepts a bullet selection keyed by an entry that does not exist', () => {
+      const raw = rawWorkspace()
+      raw.master.bulletSelection.ent_gone = ['bul_acme_1']
+
+      expect(parseWorkspace(raw).ok).toBe(true)
+    })
+  })
+
   describe('other malformed input', () => {
     it('rejects a bullet selection that is not an array of ids', () => {
       const raw = rawWorkspace()
