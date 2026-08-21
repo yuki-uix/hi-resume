@@ -5,6 +5,7 @@ import type { PageSize } from '../../../domain/composition/types'
 import type { SectionId } from '../../../domain/pool/types'
 import { FIXTURES, fixtureB } from '../../preview/fixtures'
 import { buildBlocks } from '../../../templates/standard'
+import { EntriesEditor } from '../entries/EntriesEditor'
 import { PreviewStage } from './PreviewStage'
 import { AddSectionDialog, DeleteSectionDialog, RenameDialog } from './SectionDialogs'
 import { SectionList } from './SectionList'
@@ -47,6 +48,8 @@ export function SectionsEditor() {
           </div>
           <SectionList onRename={setRenamingId} onDelete={setDeletingId} />
         </aside>
+
+        <EntriesEditor />
 
         <main className="sections-editor__preview">
           <PreviewStage blocks={blocks} pageSize={pageSize} onRenameSection={setRenamingId} debugMeasurer={debugMeasurer} />

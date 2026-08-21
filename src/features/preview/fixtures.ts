@@ -227,6 +227,37 @@ export function fixtureTextUndefined(): Workspace {
   return ws
 }
 
+// ---------------------------------------------------------------------------
+// bullets-200 — one work entry with 200 bullets. The AC9 performance gate: a
+// keystroke in the editor re-renders the whole model (all 200 bullets), so
+// per-keystroke latency must still clear its budget on the largest realistic
+// resume.
+// ---------------------------------------------------------------------------
+
+export const PERF_ENTRY_ID = 'ent_perf'
+
+export function fixtureBullets200(): Workspace {
+  const ws = createWorkspace()
+  ws.master.sectionOrder = [SECTION.work]
+  ws.master.visibleSections = [SECTION.work]
+  ws.master.sectionTitles = {}
+
+  const entryId = asEntryId(PERF_ENTRY_ID)
+  const bulletIds = Array.from({ length: 200 }, (_, index) => asBulletId(`bul_perf_${index + 1}`))
+
+  ws.pool.entries = {
+    [entryId]: { id: entryId, sectionId: SECTION.work, title: 'Performance', bulletIds },
+  }
+  ws.pool.bullets = {}
+  bulletIds.forEach((id, index) => {
+    ws.pool.bullets[id] = { id, text: `bullet ${index + 1}` }
+  })
+  ws.master.entrySelection = { [SECTION.work]: [entryId] }
+  ws.master.bulletSelection = { [entryId]: bulletIds }
+
+  return ws
+}
+
 /** id → factory, so the dev page can address any fixture by query param. */
 export const FIXTURES: Record<string, () => Workspace> = {
   a: fixtureA,
@@ -236,6 +267,7 @@ export const FIXTURES: Record<string, () => Workspace> = {
   e: fixtureE,
   custom: fixtureCustom,
   'text-undefined': fixtureTextUndefined,
+  'bullets-200': fixtureBullets200,
 }
 
 export { ENTRY, SECTION }
