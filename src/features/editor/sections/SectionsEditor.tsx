@@ -27,12 +27,15 @@ export function SectionsEditor({
   pageSize,
   debugMeasurer = false,
   statusLine,
+  backupControls,
 }: {
   store: EditorStore
   pageSize: PageSize
   debugMeasurer?: boolean
   /** Optional slot for caller-owned chrome (e.g. the autosave status line). */
   statusLine?: ReactNode
+  /** Optional slot for caller-owned backup controls (persistent path only). */
+  backupControls?: ReactNode
 }) {
   const workspace = store((state) => state.workspace)
 
@@ -54,6 +57,7 @@ export function SectionsEditor({
           </div>
           {statusLine && <div className="sections-sidebar__status">{statusLine}</div>}
           <SectionList onRename={setRenamingId} onDelete={setDeletingId} />
+          {backupControls}
         </aside>
 
         <EntriesEditor />
