@@ -8,8 +8,8 @@ import { buildBlocks } from '../../../templates/standard'
 import { PreviewStage } from './PreviewStage'
 import { AddSectionDialog, DeleteSectionDialog, RenameDialog } from './SectionDialogs'
 import { SectionList } from './SectionList'
-import { createSectionsStore } from './sections-store'
-import { SectionsStoreContext } from './SectionsStoreContext'
+import { EditorStoreContext } from '../editor-store-context'
+import { createEditorStore } from '../editor-store'
 import './sections-editor.css'
 
 /**
@@ -25,7 +25,7 @@ export function SectionsEditor() {
 
   const [store] = useState(() => {
     const makeWorkspace = FIXTURES[fixture]
-    return createSectionsStore((makeWorkspace ?? fixtureB)())
+    return createEditorStore((makeWorkspace ?? fixtureB)())
   })
   const workspace = store((state) => state.workspace)
 
@@ -36,7 +36,7 @@ export function SectionsEditor() {
   const blocks = useMemo(() => buildBlocks(buildRenderModel(workspace.pool, workspace.master)), [workspace])
 
   return (
-    <SectionsStoreContext.Provider value={store}>
+    <EditorStoreContext.Provider value={store}>
       <div className="sections-editor">
         <aside className="sections-sidebar">
           <div className="sections-sidebar__header">
@@ -56,6 +56,6 @@ export function SectionsEditor() {
       {renamingId && <RenameDialog sectionId={renamingId} onClose={() => setRenamingId(null)} />}
       {deletingId && <DeleteSectionDialog sectionId={deletingId} onClose={() => setDeletingId(null)} />}
       {adding && <AddSectionDialog onClose={() => setAdding(false)} />}
-    </SectionsStoreContext.Provider>
+    </EditorStoreContext.Provider>
   )
 }

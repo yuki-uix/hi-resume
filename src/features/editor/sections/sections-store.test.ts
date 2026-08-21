@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { BULLET, ENTRY, SECTION, createWorkspace } from '../../../domain/__fixtures__/workspace'
 import { asSectionId } from '../../../domain/pool/ids'
-import { applySectionCommand, createSectionsStore } from './sections-store'
+import { applySectionCommand } from './sections-store'
 
 // The one invariant every test here guards: section state lives in exactly one
 // place — `ResumeComposition.sectionOrder` / `visibleSections` / `sectionTitles`
@@ -223,43 +223,5 @@ describe('applySectionCommand', () => {
 
       expect(result).toBe(ws)
     })
-  })
-})
-
-describe('createSectionsStore', () => {
-  it('holds the workspace and commands, and no second copy of section order', () => {
-    const store = createSectionsStore(createWorkspace())
-    const state = store.getState()
-
-    expect(Object.keys(state).sort()).toEqual([
-      'addCustomSection',
-      'moveSection',
-      'removeCustomSection',
-      'renameSection',
-      'reorderSections',
-      'setSectionVisible',
-      'workspace',
-    ])
-
-    // The single source of truth: the workspace's composition, not a flat list.
-    expect(state.workspace.master.sectionOrder).toEqual([
-      SECTION.summary,
-      SECTION.work,
-      SECTION.project,
-      SECTION.skill,
-      SECTION.oss,
-    ])
-  })
-
-  it('dispatches commands through the reducer onto the composition', () => {
-    const store = createSectionsStore(createWorkspace())
-    store.getState().setSectionVisible(SECTION.skill, false)
-
-    const state = store.getState()
-    expect(state.workspace.master.visibleSections).toEqual([
-      SECTION.summary,
-      SECTION.work,
-      SECTION.project,
-    ])
   })
 })

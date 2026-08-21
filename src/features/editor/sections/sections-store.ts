@@ -1,7 +1,4 @@
-import { create } from 'zustand'
-
 import type { Workspace } from '../../../domain/composition/types'
-import { newSectionId } from '../../../domain/pool/ids'
 import type { BulletId, Section, SectionId, SectionLayout } from '../../../domain/pool/types'
 
 /**
@@ -156,52 +153,3 @@ export function applySectionCommand(workspace: Workspace, command: SectionComman
     }
   }
 }
-
-export type SectionsState = {
-  workspace: Workspace
-  reorderSections: (order: SectionId[]) => void
-  moveSection: (id: SectionId, direction: 'up' | 'down') => void
-  setSectionVisible: (id: SectionId, visible: boolean) => void
-  renameSection: (id: SectionId, title: string) => void
-  addCustomSection: (title: string, layout: SectionLayout) => SectionId
-  removeCustomSection: (id: SectionId) => void
-}
-
-/**
- * A per-editor store, not a module singleton: the dev page seeds it from the
- * `?fixture=` query param, and every component under one editor shares the same
- * instance through context. Keeping the store instance local means the fixture
- * can change without a re-init action racing the first render.
- */
-export function createSectionsStore(initial: Workspace) {
-  return create<SectionsState>()((set) => ({
-    workspace: initial,
-    reorderSections: (order) =>
-      set((state) => ({ workspace: applySectionCommand(state.workspace, { type: 'reorderSections', order }) })),
-    moveSection: (id, direction) =>
-      set((state) => ({
-        workspace: applySectionCommand(state.workspace, { type: 'moveSection', id, direction }),
-      })),
-    setSectionVisible: (id, visible) =>
-      set((state) => ({
-        workspace: applySectionCommand(state.workspace, { type: 'setSectionVisible', id, visible }),
-      })),
-    renameSection: (id, title) =>
-      set((state) => ({
-        workspace: applySectionCommand(state.workspace, { type: 'renameSection', id, title }),
-      })),
-    addCustomSection: (title, layout) => {
-      const id = newSectionId()
-      set((state) => ({
-        workspace: applySectionCommand(state.workspace, { type: 'addCustomSection', id, title, layout }),
-      }))
-      return id
-    },
-    removeCustomSection: (id) =>
-      set((state) => ({
-        workspace: applySectionCommand(state.workspace, { type: 'removeCustomSection', id }),
-      })),
-  }))
-}
-
-export type SectionsStore = ReturnType<typeof createSectionsStore>
