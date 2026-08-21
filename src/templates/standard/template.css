@@ -1,0 +1,128 @@
+/*
+ * Standard ATS-friendly single-column template.
+ *
+ * Pagination measures each block's height and places blocks into fixed page
+ * containers, so every block root here MUST have zero margin — any vertical
+ * spacing goes through padding, otherwise measured heights stop adding up to
+ * the real flow height and pages can clip or leak. The page containers rely on
+ * this just as much as the off-screen measurer does.
+ */
+
+.resume-page {
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: #1a1a1a;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* ---- basics ---- */
+
+.resume-basics {
+  margin: 0;
+  padding: 0 0 14px 0;
+}
+
+.resume-name {
+  margin: 0;
+  padding: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.resume-headline {
+  margin: 0;
+  padding: 2px 0 0 0;
+  font-size: 14px;
+  color: #444;
+}
+
+.resume-contact {
+  margin: 0;
+  padding: 4px 0 0 0;
+  font-size: 12px;
+  color: #444;
+}
+
+.resume-links {
+  margin: 0;
+  padding: 2px 0 0 0;
+  font-size: 12px;
+  color: #444;
+}
+
+.resume-links a {
+  color: #1a4d8f;
+  text-decoration: none;
+}
+
+.resume-links a:not(:last-child)::after {
+  content: ' · ';
+  color: #444;
+}
+
+/* ---- sections ---- */
+
+.resume-section-title {
+  margin: 0;
+  padding: 16px 0 6px 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.resume-text-body {
+  margin: 0;
+  padding: 8px 0 0 0;
+  white-space: pre-wrap;
+}
+
+/* ---- entries ---- */
+
+.resume-entry {
+  margin: 0;
+  padding: 10px 0 0 0;
+}
+
+.resume-entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.resume-entry-title {
+  margin: 0;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.resume-entry-period {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.resume-entry-subtitle {
+  margin: 0;
+  padding: 1px 0 0 0;
+  font-size: 12px;
+  color: #555;
+  font-style: italic;
+}
+
+.resume-bullets {
+  margin: 0;
+  padding: 4px 0 0 18px;
+}
+
+.resume-bullet {
+  margin: 0;
+  padding: 0;
+  font-size: 12.5px;
+}
