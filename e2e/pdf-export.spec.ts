@@ -1,7 +1,9 @@
 import { execFile } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 
 /**
  * AC 1–6 for issue #8 (PDF 导出与打印样式).
@@ -113,6 +115,45 @@ async function pageEntryTitles(page: Page, index: number): Promise<string[]> {
   return page
     .locator(`.resume-page[data-page-index="${index}"] [data-entry-id] .resume-entry-title`)
     .evaluateAll((els) => els.map((el) => el.textContent ?? ''))
+}
+
+/**
+ * Extract text with a second, independent parser (Mozilla's PDF.js). Unlike
+ * poppler's `pdftotext`, PDF.js reads the font's ToUnicode CMap literally, so it
+ * surfaces the Kangxi-radical code points that poppler silently normalizes away.
+ * This is the parser that caught the #20 defect where `pdftotext` passed.
+ */
+async function pdfjsText(path: string): Promise<string> {
+  const data = new Uint8Array(readFileSync(path))
+  const doc = await getDocument({ data }).promise
+  let out = ''
+  for (let i = 1; i <= doc.numPages; i += 1) {
+    const page = await doc.getPage(i)
+    const content = await page.getTextContent()
+    out += content.items.map((item) => ('str' in item ? item.str : '')).join('')
+    out += '\n'
+  }
+  return out
+}
+
+/**
+ * The CJK code points a parser reported, in reading order. Both the unified
+ * ideograph block and the Kangxi-radical block are kept — the #20 defect maps a
+ * unified ideograph (e.g. 工 U+5DE5) onto its radical (U+2F2F), so a check that
+ * only looked at U+4E00–U+9FFF would silently drop the evidence and pass.
+ */
+function cjkCodePoints(text: string): number[] {
+  const points: number[] = []
+  for (const ch of text) {
+    const cp = ch.codePointAt(0) ?? 0
+    if ((cp >= 0x4e00 && cp <= 0x9fff) || (cp >= 0x2f00 && cp <= 0x2fdf)) points.push(cp)
+  }
+  return points
+}
+
+/** True when a code point is a Kangxi radical (the #20 failure signature). */
+function isKangxiRadical(cp: number): boolean {
+  return cp >= 0x2f00 && cp <= 0x2fdf
 }
 
 // ---------------------------------------------------------------------------
@@ -259,10 +300,10 @@ test('AC5: PDF page boundaries match the screen pages', async ({ page }, testInf
 })
 
 // ---------------------------------------------------------------------------
-// AC 6 — every font in the PDF is embedded (the CJK font above all).
+// AC 6 — every font in the PDF is embedded, and none is a Type 3 procedure.
 // ---------------------------------------------------------------------------
 
-test('AC6: every font in the PDF is embedded', async ({ page }, testInfo) => {
+test('AC6: fonts are embedded, and no font is Type 3', async ({ page }, testInfo) => {
   await open(page, 'a')
   const path = await renderPdf(page, testInfo)
 
@@ -275,5 +316,45 @@ test('AC6: every font in the PDF is embedded', async ({ page }, testInfo) => {
   expect(fonts.length).toBeGreaterThan(0)
   for (const font of fonts) {
     expect(font.emb, `${font.name} has emb=${font.emb}`).toBe('yes')
+    // #20: macOS system fonts were emitted as Type 3 procedures whose ToUnicode
+    // maps land on Kangxi radicals. A Type 3 font in the PDF is the defect, even
+    // though its glyphs are technically "embedded".
+    expect(font.type, `${font.name} is a Type 3 font`).not.toBe('Type 3')
   }
+
+  // The bundled CJK font must actually be the one carrying the Chinese text.
+  const cjkNames = fonts.map((font) => font.name).filter((name) => name.includes('SourceHanSansSC'))
+  expect(cjkNames.length).toBeGreaterThan(0)
+})
+
+// ---------------------------------------------------------------------------
+// AC 7 — two independent parsers extract identical CJK code points, none of
+// which are Kangxi radicals. Exercises the rare-character fixture so a narrow
+// font subset (which falls back to a system font for the rare glyphs) cannot
+// pass.
+// ---------------------------------------------------------------------------
+
+test('AC7: pdftotext and pdfjs agree, with no Kangxi-radical code points', async ({ page }, testInfo) => {
+  await open(page, 'rare')
+  const path = await renderPdf(page, testInfo)
+
+  const poppler = await pdfText(path)
+  const pdfjs = await pdfjsText(path)
+
+  // The rare characters must survive in both parsers' output — they are the
+  // point of this fixture.
+  expect(poppler).toContain('頔玥甯')
+  expect(pdfjs).toContain('頔玥甯')
+  expect(poppler).toContain('爨')
+  expect(pdfjs).toContain('爨')
+
+  const popplerPoints = cjkCodePoints(poppler)
+  const pdfjsPoints = cjkCodePoints(pdfjs)
+
+  expect(popplerPoints.length).toBeGreaterThan(0)
+  // The two parsers must report the same Chinese characters in the same order.
+  expect(pdfjsPoints).toEqual(popplerPoints)
+  // And none of them may be a Kangxi radical (the #20 failure signature).
+  const radicals = popplerPoints.filter(isKangxiRadical)
+  expect(radicals, `Kangxi-radical code points: ${radicals.map((c) => 'U+' + c.toString(16).toUpperCase()).join(' ')}`).toEqual([])
 })

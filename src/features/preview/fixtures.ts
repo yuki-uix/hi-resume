@@ -205,6 +205,22 @@ export function fixtureE(): Workspace {
 }
 
 // ---------------------------------------------------------------------------
+// rare — the base fixture with rare CJK characters injected into the basics.
+// 頔/玥/甯 are uncommon given-name characters; 爨 (U+7228) sits far outside any
+// "common 3500" subset. The PDF coverage gate uses these to prove the bundled
+// font is the full unified-ideograph block, not a narrow subset: a character
+// the font lacks would fall back to a system font and reappear as Type 3.
+// ---------------------------------------------------------------------------
+
+export function fixtureRare(): Workspace {
+  const ws = createWorkspace()
+  ws.pool.basics.name = '頔玥甯'
+  ws.pool.basics.headline = '工程师'
+  ws.pool.basics.location = '爨村'
+  return ws
+}
+
+// ---------------------------------------------------------------------------
 // custom — the hidden `sec_oss` custom section is made visible. Renders through
 // the generic renderer without any template change.
 // ---------------------------------------------------------------------------
@@ -265,6 +281,7 @@ export const FIXTURES: Record<string, () => Workspace> = {
   c: fixtureC,
   d: fixtureD,
   e: fixtureE,
+  rare: fixtureRare,
   custom: fixtureCustom,
   'text-undefined': fixtureTextUndefined,
   'bullets-200': fixtureBullets200,

@@ -1,0 +1,19 @@
+/*
+ * The bundled resume font: Source Han Sans SC, the full unified-ideograph
+ * block, as a single variable font with TrueType (glyf) outlines.
+ *
+ * Why glyf and not the CFF/OTF build the upstream project ships by default:
+ * Chromium's print-to-PDF pipeline embeds CFF-outline fonts as Type 3
+ * procedures (whose ToUnicode maps land on Kangxi radicals), while
+ * TrueType-outline fonts embed as CIDFontType2 with a correct ToUnicode map.
+ * This woff2 is the upstream TrueType variable build; its `wght` axis
+ * (250–900) covers the two weights the template uses — 400 for body text and
+ * 700 for names/titles — in a single file, so both embed as one CID font.
+ */
+@font-face {
+  font-family: 'Source Han Sans SC VF';
+  src: url('./SourceHanSansSC-VF.ttf.woff2') format('woff2');
+  font-weight: 250 900;
+  font-style: normal;
+  font-display: block;
+}
