@@ -1,0 +1,230 @@
+/* Middle-column entry form.
+ *
+ * This column is a *sibling* of `.sections-editor__preview`, never an ancestor
+ * of the off-screen pagination measurer, so it may set its own typography here.
+ * The hard constraint from `sections-editor.css` is about measurer ancestors —
+ * `.entries-editor` is not one.
+ */
+
+.entries-editor {
+  flex-shrink: 0;
+  width: 360px;
+  box-sizing: border-box;
+  padding: 16px;
+  background: #fbfbfc;
+  border-right: 1px solid #d9dbe0;
+  overflow-y: auto;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: #1a1a1a;
+}
+
+.entries-section {
+  margin-bottom: 20px;
+}
+
+.entries-section__title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ---- fields (shared by basics, entries) ---- */
+
+.entries-field {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.entries-field__label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 11px;
+  color: #555;
+}
+
+.entries-field__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #c6cad1;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.entries-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #c6cad1;
+  border-radius: 5px;
+  background: #fff;
+  resize: vertical;
+}
+
+.entries-add {
+  display: inline-block;
+  padding: 5px 12px;
+  font-size: 12px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.entries-add:hover {
+  background: #eceef1;
+}
+
+.entries-icon-button {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.entries-links {
+  margin-top: 2px;
+}
+
+.entries-links__row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+/* ---- entry list ---- */
+
+.entry-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.entry-row {
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e4e8;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.entry-row[data-dragging='true'] {
+  opacity: 0.75;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.entry-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.entry-row__handle {
+  padding: 0 2px;
+  border: none;
+  background: none;
+  cursor: grab;
+  color: #8a8f98;
+  font-size: 14px;
+  touch-action: none;
+}
+
+.entry-row__delete button,
+.bullet-row__delete {
+  flex-shrink: 0;
+  padding: 3px 6px;
+  font-size: 11px;
+  border: 1px solid #e0b6b3;
+  background: #f7f8fa;
+  color: #b3241c;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.entry-row__delete button:hover,
+.bullet-row__delete:hover {
+  background: #eceef1;
+}
+
+.entry-fields {
+  margin-bottom: 8px;
+}
+
+.entry-period {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.entry-period__sep {
+  flex-shrink: 0;
+  color: #8a8f98;
+}
+
+/* ---- bullets ---- */
+
+.entry-bullets {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.bullet-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 0;
+  border-top: 1px dashed #e2e4e8;
+}
+
+.bullet-row[data-dragging='true'] {
+  opacity: 0.75;
+}
+
+.bullet-row__handle {
+  flex-shrink: 0;
+  margin-top: 4px;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  cursor: grab;
+  color: #8a8f98;
+  font-size: 13px;
+  touch-action: none;
+}
+
+.bullet-row__text {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 5px 7px;
+  font-size: 13px;
+  line-height: 1.4;
+  border: 1px solid #c6cad1;
+  border-radius: 5px;
+  background: #fff;
+  resize: vertical;
+}
+
+.bullet-row__delete {
+  margin-top: 2px;
+}
+
+.entries-add--bullet {
+  margin-left: 22px;
+}
+
+/* ---- print: the form never reaches the PDF ---- */
+
+@media print {
+  .entries-editor {
+    display: none !important;
+  }
+}

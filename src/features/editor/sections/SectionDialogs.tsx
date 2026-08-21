@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 
 import type { Workspace } from '../../../domain/composition/types'
 import type { SectionId, SectionLayout } from '../../../domain/pool/types'
-import { useSectionsStore } from './SectionsStoreContext'
+import { useEditorStore } from '../editor-store-context'
 
 /**
  * The three section dialogs share one modal shell. Each is mounted only while
@@ -41,7 +41,7 @@ function sectionTitle(workspace: Workspace, id: SectionId): string {
 }
 
 export function RenameDialog({ sectionId, onClose }: { sectionId: SectionId; onClose: () => void }) {
-  const store = useSectionsStore()
+  const store = useEditorStore()
   const [value, setValue] = useState(() => sectionTitle(store.getState().workspace, sectionId))
 
   const submit = () => {
@@ -84,7 +84,7 @@ export function RenameDialog({ sectionId, onClose }: { sectionId: SectionId; onC
 }
 
 export function AddSectionDialog({ onClose }: { onClose: () => void }) {
-  const store = useSectionsStore()
+  const store = useEditorStore()
   const [name, setName] = useState('')
   const [layout, setLayout] = useState<SectionLayout>('entries')
 
@@ -154,7 +154,7 @@ export function AddSectionDialog({ onClose }: { onClose: () => void }) {
 }
 
 export function DeleteSectionDialog({ sectionId, onClose }: { sectionId: SectionId; onClose: () => void }) {
-  const store = useSectionsStore()
+  const store = useEditorStore()
   const title = sectionTitle(store.getState().workspace, sectionId)
 
   const confirm = () => {

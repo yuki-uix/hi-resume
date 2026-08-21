@@ -15,7 +15,7 @@ import {
 import type { CSSProperties } from 'react'
 
 import type { Section, SectionId } from '../../../domain/pool/types'
-import { useSectionsStore } from './SectionsStoreContext'
+import { useEditorStore } from '../editor-store-context'
 
 /**
  * The left-column list. Its order is `ResumeComposition.sectionOrder`, mapped
@@ -29,7 +29,7 @@ export function SectionList({
   onRename: (id: SectionId) => void
   onDelete: (id: SectionId) => void
 }) {
-  const store = useSectionsStore()
+  const store = useEditorStore()
   const workspace = store((state) => state.workspace)
 
   const sections = workspace.master.sectionOrder
@@ -73,7 +73,7 @@ function SectionRow({
   onRename: (id: SectionId) => void
   onDelete: (id: SectionId) => void
 }) {
-  const store = useSectionsStore()
+  const store = useEditorStore()
   const workspace = store((state) => state.workspace)
   const visible = workspace.master.visibleSections.includes(section.id)
   const title = workspace.master.sectionTitles[section.id] ?? section.title

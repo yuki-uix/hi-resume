@@ -4,7 +4,7 @@ import type { PageSize } from '../../../domain/composition/types'
 import type { SectionId } from '../../../domain/pool/types'
 import { PaginatedPreview } from '../../preview/PaginatedPreview'
 import type { PageBlock } from '../../preview/types'
-import { useSectionsStore } from './SectionsStoreContext'
+import { useEditorStore } from '../editor-store-context'
 
 /**
  * Wraps the paginated preview and floats the section toolbar above it.
@@ -19,12 +19,14 @@ export function PreviewStage({
   blocks,
   pageSize,
   onRenameSection,
+  debugMeasurer = false,
 }: {
   blocks: PageBlock[]
   pageSize: PageSize
   onRenameSection: (id: SectionId) => void
+  debugMeasurer?: boolean
 }) {
-  const store = useSectionsStore()
+  const store = useEditorStore()
   const workspace = store((state) => state.workspace)
 
   const stageRef = useRef<HTMLDivElement | null>(null)
@@ -112,7 +114,7 @@ export function PreviewStage({
       onMouseOver={handleMouseOver}
       onMouseLeave={handleMouseLeave}
     >
-      <PaginatedPreview blocks={blocks} pageSize={pageSize} />
+      <PaginatedPreview blocks={blocks} pageSize={pageSize} debugMeasurer={debugMeasurer} />
       {hovered && position && (
         <SectionToolbar
           sectionId={hovered}
@@ -139,7 +141,7 @@ function SectionToolbar({
   style: CSSProperties
   onRename: () => void
 }) {
-  const store = useSectionsStore()
+  const store = useEditorStore()
 
   return (
     <div className="section-toolbar" style={style} role="toolbar" aria-label="区块操作" data-testid="section-toolbar">
