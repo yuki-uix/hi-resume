@@ -1,0 +1,68 @@
+/* JSON backup controls, docked at the bottom of the editor sidebar.
+ *
+ * Lives inside `.sections-sidebar`, so it inherits that column's typography and
+ * never sets font-family / font-size on a pagination-measurer ancestor (see the
+ * header comment in `sections-editor.css`). The dialogs reuse the global
+ * `.dialog-*` classes from there, so the import confirm/error screens match the
+ * rest of the editor chrome.
+ */
+
+.backup {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e4e8;
+}
+
+.backup__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.backup__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.backup__button {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.backup__button:hover {
+  background: #eceef1;
+}
+
+.backup__file-input {
+  display: none;
+}
+
+.backup__done {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #1a7f37;
+}
+
+.backup__warn {
+  margin-top: 10px;
+  color: #b3241c;
+}
+
+.backup__errors {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #b3241c;
+}
+
+.backup__errors li {
+  margin: 4px 0;
+}

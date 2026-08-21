@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Workspace } from '../domain/composition/types'
 import { SectionsEditor } from '../features/editor/sections/SectionsEditor'
 import { createEditorStore, type EditorStore } from '../features/editor/editor-store'
+import { WorkspaceBackup } from '../features/export/WorkspaceBackup'
 import { AUTOSAVE_DEBOUNCE_MS, createAutosaveController, type AutosaveController } from '../persistence/autosave'
 import { createEmptyWorkspace } from '../persistence/empty-workspace'
 import { SchemaVersionMismatchError, WorkspaceStorageError } from '../persistence/errors'
@@ -116,7 +117,12 @@ function ReadyEditor({ workspace, initialSave }: { workspace: Workspace; initial
   }, [store, initialSave])
 
   return (
-    <SectionsEditor store={store} pageSize={pageSize} statusLine={<SaveStatus lastSavedAt={lastSavedAt} error={saveError} />} />
+    <SectionsEditor
+      store={store}
+      pageSize={pageSize}
+      statusLine={<SaveStatus lastSavedAt={lastSavedAt} error={saveError} />}
+      backupControls={<WorkspaceBackup />}
+    />
   )
 }
 

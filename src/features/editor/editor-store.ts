@@ -19,6 +19,9 @@ import { applySectionCommand } from './sections/sections-store'
 export type EditorState = {
   workspace: Workspace
 
+  // whole-workspace replacement (JSON import)
+  replaceWorkspace: (workspace: Workspace) => void
+
   // sections
   reorderSections: (order: SectionId[]) => void
   moveSection: (id: SectionId, direction: 'up' | 'down') => void
@@ -53,6 +56,11 @@ export type EditorState = {
 export function createEditorStore(initial: Workspace) {
   return create<EditorState>()((set) => ({
     workspace: initial,
+
+    // The one action that does not go through a pure command reducer: JSON import
+    // has already produced a fully validated `Workspace`, so the store only swaps
+    // it in. The caller must have persisted it first (see `WorkspaceBackup`).
+    replaceWorkspace: (workspace) => set({ workspace }),
 
     reorderSections: (order) =>
       set((state) => ({ workspace: applySectionCommand(state.workspace, { type: 'reorderSections', order }) })),
