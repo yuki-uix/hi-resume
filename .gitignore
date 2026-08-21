@@ -30,3 +30,5 @@ src-tauri/gen/
 coverage/
 playwright-report/
 test-results/
+
+.delegate-logs/
