@@ -1,0 +1,30 @@
+/* Startup states for the persistent path: loading and load-error. The editor
+ * itself lives in `.sections-editor` (see sections-editor.css). */
+
+.persistent-loading,
+.persistent-error {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: #1a1a1a;
+}
+
+.persistent-error__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.persistent-error__text {
+  margin: 0;
+  max-width: 480px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #555;
+}

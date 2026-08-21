@@ -1,33 +1,39 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 
 import { buildRenderModel } from '../../../domain/composition/render-model'
 import type { PageSize } from '../../../domain/composition/types'
 import type { SectionId } from '../../../domain/pool/types'
-import { FIXTURES, fixtureB } from '../../preview/fixtures'
 import { buildBlocks } from '../../../templates/standard'
 import { EntriesEditor } from '../entries/EntriesEditor'
+import { EditorStoreContext } from '../editor-store-context'
+import type { EditorStore } from '../editor-store'
 import { PreviewStage } from './PreviewStage'
 import { AddSectionDialog, DeleteSectionDialog, RenameDialog } from './SectionDialogs'
 import { SectionList } from './SectionList'
-import { EditorStoreContext } from '../editor-store-context'
-import { createEditorStore } from '../editor-store'
 import './sections-editor.css'
 
 /**
- * The editor page: left column (section list) + right column (paginated
- * preview). The store is seeded from the same `?fixture=` / `?pageSize=` query
- * params the #3 dev page used, so the pagination e2e keeps working unchanged.
+ * The editor page: left column (section list) + middle column (entries form) +
+ * right column (paginated preview).
+ *
+ * The component no longer decides where the workspace comes from. The store is
+ * created and owned by the caller — the dev fixture bootstrap or the
+ * persistence bootstrap in `App.tsx` — so the two startup paths cannot be
+ * confused, and a `?fixture=` param can never seed example data on the
+ * production path.
  */
-export function SectionsEditor() {
-  const params = new URLSearchParams(window.location.search)
-  const fixture = params.get('fixture') ?? 'b'
-  const pageSize: PageSize = params.get('pageSize') === 'Letter' ? 'Letter' : 'A4'
-  const debugMeasurer = params.get('measurer') === '1'
-
-  const [store] = useState(() => {
-    const makeWorkspace = FIXTURES[fixture]
-    return createEditorStore((makeWorkspace ?? fixtureB)())
-  })
+export function SectionsEditor({
+  store,
+  pageSize,
+  debugMeasurer = false,
+  statusLine,
+}: {
+  store: EditorStore
+  pageSize: PageSize
+  debugMeasurer?: boolean
+  /** Optional slot for caller-owned chrome (e.g. the autosave status line). */
+  statusLine?: ReactNode
+}) {
   const workspace = store((state) => state.workspace)
 
   const [renamingId, setRenamingId] = useState<SectionId | null>(null)
@@ -46,6 +52,7 @@ export function SectionsEditor() {
               新建区块
             </button>
           </div>
+          {statusLine && <div className="sections-sidebar__status">{statusLine}</div>}
           <SectionList onRename={setRenamingId} onDelete={setDeletingId} />
         </aside>
 
