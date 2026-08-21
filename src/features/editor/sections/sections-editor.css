@@ -62,6 +62,27 @@
   color: #b3241c;
 }
 
+.sections-sidebar__print {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e4e8;
+}
+
+.print-button {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid #1a4d8f;
+  background: #1a4d8f;
+  color: #fff;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.print-button:hover {
+  background: #16407a;
+}
+
 .sections-list {
   list-style: none;
   margin: 0;
@@ -294,7 +315,8 @@
   }
 
   .sections-sidebar,
-  .section-toolbar {
+  .section-toolbar,
+  .dialog-backdrop {
     display: none !important;
   }
 
