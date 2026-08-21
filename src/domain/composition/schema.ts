@@ -46,6 +46,7 @@ export const sectionSchema = z.object({
   kind: sectionKindSchema,
   title: z.string(),
   layout: sectionLayoutSchema,
+  text: z.string().optional(),
   removable: z.boolean(),
 })
 
@@ -95,16 +96,15 @@ export const resumeCompositionSchema = z.object({
   sectionTitles: z.record(sectionIdSchema, z.string()),
   entrySelection: z.record(sectionIdSchema, z.array(entryIdSchema)),
   bulletSelection: z.record(entryIdSchema, z.array(bulletIdSchema)),
-  summary: z.string().optional(),
 })
 
 /** A variant stores only the keys it changed, so every key is optional. */
 export const partialResumeCompositionSchema = resumeCompositionSchema.partial()
 
 /**
- * Keys are entry IDs, bullet IDs or the literal `"summary"`. They cannot be
- * told apart at runtime — all three are strings — so the schema validates the
- * shape and the branded key type is asserted, same as {@link idSchema}.
+ * Keys are entry IDs, bullet IDs or section IDs. They cannot be told apart at
+ * runtime — all three are strings — so the schema validates the shape and the
+ * branded key type is asserted, same as {@link idSchema}.
  */
 export const textOverridesSchema = z.record(z.string(), z.string()) as unknown as z.ZodType<
   TextOverrides,

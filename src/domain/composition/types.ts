@@ -14,18 +14,19 @@ export type ResumeComposition = {
   entrySelection: Record<SectionId, EntryId[]>
   /** Selected bullets per entry; array order is display order. */
   bulletSelection: Record<EntryId, BulletId[]>
-  summary?: string
 }
 
 /**
  * Whole-value text replacements, never a text diff. Keyed by the ID of the
- * thing being replaced: an entry's title, a bullet's text, or the summary.
+ * thing being replaced: an entry's title, a bullet's text, or a section's
+ * body text.
  *
- * Section titles are *not* here — they travel through
- * `ResumeComposition.sectionTitles`, which has its own per-`SectionId`
- * inheritance granularity.
+ * Section *titles* are not here — they travel through
+ * `ResumeComposition.sectionTitles`. Both `sectionTitles` and `textOverrides`
+ * are keyed by `SectionId`, but they mean different things: a section's title
+ * versus the prose underneath it.
  */
-export type TextOverrides = Partial<Record<EntryId | BulletId | 'summary', string>>
+export type TextOverrides = Partial<Record<EntryId | BulletId | SectionId, string>>
 
 /** Where a job application stands. One variant, one application. */
 export type ApplicationStatus =

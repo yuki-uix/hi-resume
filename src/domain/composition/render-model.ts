@@ -27,6 +27,8 @@ export type RenderSection = {
   layout: SectionLayout
   /** Order comes from `entrySelection`, not from the pool. */
   entries: RenderEntry[]
+  /** Body prose for `layout: 'text'` sections: `textOverrides[sectionId]` if present, otherwise `Section.text`. */
+  text?: string
 }
 
 export type RenderEntry = {
@@ -86,13 +88,21 @@ export function buildRenderModel(
     const section = pool.sections[sectionId]
     if (!section) continue
 
-    sections.push({
+    const rendered: RenderSection = {
       id: sectionId,
       kind: section.kind,
       title: composition.sectionTitles[sectionId] ?? section.title,
       layout: section.layout,
       entries: buildEntries(pool, composition, textOverrides, sectionId),
-    })
+    }
+    // Text-shaped sections carry prose, not entries. `entries` is still filled
+    // above (and comes back empty), so a template can always read it.
+    if (section.layout === 'text') {
+      const text = textOverrides[sectionId] ?? section.text
+      if (text !== undefined) rendered.text = text
+    }
+
+    sections.push(rendered)
   }
 
   return { basics: copyBasics(pool.basics), sections }

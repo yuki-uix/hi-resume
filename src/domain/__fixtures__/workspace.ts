@@ -9,7 +9,7 @@ import type { ItemPool } from '../pool/types'
  * happy path:
  *
  * - `sec_oss` sits in `sectionOrder` but not in `visibleSections`;
- * - `sec_summary` is a text-layout section with no entry selection;
+ * - `sec_summary` is a text-layout section whose body lives in `Section.text`;
  * - `sec_work` is renamed by the master composition, the other sections are not;
  * - `ent_acme` selects its bullets out of order and drops one, so bullet order
  *   can only come from `bulletSelection`;
@@ -60,6 +60,7 @@ export function createItemPool(): ItemPool {
         kind: 'summary',
         title: '个人简介',
         layout: 'text',
+        text: 'Product engineer with eight years building tools people use daily.',
         removable: false,
       },
       [SECTION.work]: {
@@ -227,7 +228,6 @@ export function createMasterComposition(): ResumeComposition {
       [ENTRY.skills]: [BULLET.skills1, BULLET.skills2],
       [ENTRY.oss]: [BULLET.oss1],
     },
-    summary: 'Product engineer with eight years building tools people use daily.',
   }
 }
 

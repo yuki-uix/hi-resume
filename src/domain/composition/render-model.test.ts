@@ -33,6 +33,7 @@ describe('buildRenderModel', () => {
           title: '个人简介',
           layout: 'text',
           entries: [],
+          text: 'Product engineer with eight years building tools people use daily.',
         },
         {
           id: 'sec_work',
@@ -173,6 +174,34 @@ describe('buildRenderModel', () => {
     })
   })
 
+  describe('text sections', () => {
+    it('gives a text-layout section its body and no entries, and leaves entries sections without text', () => {
+      const model = buildRenderModel(createItemPool(), createMasterComposition())
+
+      const summary = model.sections[0]
+      expect(summary?.layout).toBe('text')
+      expect(summary?.text).toBe(
+        'Product engineer with eight years building tools people use daily.',
+      )
+      expect(summary?.entries).toEqual([])
+
+      const work = model.sections[1]
+      expect(work?.layout).toBe('entries')
+      expect(work?.text).toBeUndefined()
+      expect(work?.entries.length).toBeGreaterThan(0)
+    })
+
+    it('renders the fixture summary body into the output', () => {
+      const model = buildRenderModel(createItemPool(), createMasterComposition())
+
+      const summary = model.sections.find((section) => section.kind === 'summary')
+      expect(summary?.title).toBe('个人简介')
+      expect(summary?.text).toBe(
+        'Product engineer with eight years building tools people use daily.',
+      )
+    })
+  })
+
   describe('bullet order', () => {
     it('orders bullets by bulletSelection, not by Entry.bulletIds', () => {
       const pool = createItemPool()
@@ -242,12 +271,26 @@ describe('buildRenderModel', () => {
       })
     })
 
-    it('does not rename sections — that is what sectionTitles is for', () => {
+    it('overrides a text section body without touching its title', () => {
       const model = buildRenderModel(createItemPool(), createMasterComposition(), {
-        [asEntryId('sec_work')]: 'Should be ignored',
+        [SECTION.summary]: 'Backend-leaning engineer focused on payments.',
       })
 
+      // `textOverrides` overrides the body text, never the title — the title
+      // is `sectionTitles`' job.
+      expect(model.sections[0]?.title).toBe('个人简介')
+      expect(model.sections[0]?.text).toBe('Backend-leaning engineer focused on payments.')
+    })
+
+    it('does not rename sections — that is what sectionTitles is for', () => {
+      const model = buildRenderModel(createItemPool(), createMasterComposition(), {
+        [SECTION.work]: 'Should be ignored as a title',
+      })
+
+      // `sec_work` is an entries section, so a text override keyed by its id
+      // neither renames it nor gives it a body.
       expect(model.sections[1]?.title).toBe('工作经验')
+      expect(model.sections[1]?.text).toBeUndefined()
     })
   })
 

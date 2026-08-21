@@ -63,8 +63,5 @@ export function resolveComposition(
     bulletSelection: mergeByKey(master.bulletSelection, variant?.bulletSelection, copyIds),
   }
 
-  const summary = variant?.summary ?? master.summary
-  if (summary !== undefined) resolved.summary = summary
-
   return resolved
 }

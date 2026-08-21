@@ -41,6 +41,8 @@ export type Section = {
   /** Default title. A composition may rename it via `sectionTitles`. */
   title: string
   layout: SectionLayout
+  /** Body prose for text-layout sections. A variant overrides it via `textOverrides[sectionId]`. */
+  text?: string
   /** Built-in sections are `false`: they can be hidden, never deleted. */
   removable: boolean
 }

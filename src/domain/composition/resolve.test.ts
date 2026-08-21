@@ -159,33 +159,6 @@ describe('resolveComposition', () => {
     })
   })
 
-  describe('summary', () => {
-    it('takes the variant summary when it has one', () => {
-      const result = resolveComposition(createMasterComposition(), {
-        summary: 'Backend-leaning engineer focused on payments.',
-      })
-
-      expect(result.summary).toBe('Backend-leaning engineer focused on payments.')
-    })
-
-    it('falls back to the master summary', () => {
-      const result = resolveComposition(createMasterComposition(), { sectionTitles: {} })
-
-      expect(result.summary).toBe(
-        'Product engineer with eight years building tools people use daily.',
-      )
-    })
-
-    it('omits the key entirely when neither side has a summary', () => {
-      const master = createMasterComposition()
-      delete master.summary
-
-      const result = resolveComposition(master, {})
-
-      expect('summary' in result).toBe(false)
-    })
-  })
-
   describe('an explicit undefined counts as "not overridden"', () => {
     it('keeps master values when variant keys are present but undefined', () => {
       // Hand-edited or round-tripped JSON can carry undefined values that the
@@ -194,7 +167,6 @@ describe('resolveComposition', () => {
         sectionOrder: undefined,
         sectionTitles: { [SECTION.work]: undefined },
         entrySelection: { [SECTION.work]: undefined },
-        summary: undefined,
       } as unknown as Partial<ResumeComposition>
 
       const result = resolveComposition(createMasterComposition(), variant)
@@ -212,9 +184,6 @@ describe('resolveComposition', () => {
         'ent_globex',
         'ent_initech',
       ])
-      expect(result.summary).toBe(
-        'Product engineer with eight years building tools people use daily.',
-      )
     })
   })
 })
