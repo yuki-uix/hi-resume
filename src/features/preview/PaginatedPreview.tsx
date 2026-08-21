@@ -29,23 +29,31 @@ export function PaginatedPreview({ blocks, pageSize }: Props) {
   const [pages, setPages] = useState<PageBlock[][] | null>(null)
   const measurerRef = useRef<HTMLDivElement | null>(null)
 
-  // Re-measure only when the input identity changes. Keys are stable IDs, so
-  // joining them is a cheap, reliable fingerprint of "same content, same size".
-  const inputKey = `${pageSize}:${blocks.map((block) => block.key).join('|')}`
-  const lastMeasuredKey = useRef<string | null>(null)
-  const measuring = lastMeasuredKey.current !== inputKey
+  // Re-measure when the *input reference* changes. The previous fingerprint
+  // joined `block.key`s, which are stable IDs — correct while the model was
+  // immutable, but a rename (or any text override) changes a block's node
+  // without changing its key, so the pages would silently keep rendering the
+  // stale node. `blocks` is a fresh array whenever the render model changes, so
+  // reference identity catches both key changes (reorder / add / remove) and
+  // content-only changes (rename) without touching how heights are read or how
+  // pages are assigned.
+  const measuredRef = useRef<{ pageSize: PageSize; blocks: PageBlock[] } | null>(null)
+  const measuring =
+    measuredRef.current === null ||
+    measuredRef.current.pageSize !== pageSize ||
+    measuredRef.current.blocks !== blocks
 
   useLayoutEffect(() => {
-    if (lastMeasuredKey.current === inputKey) return
+    if (!measuring) return
     const host = measurerRef.current
     if (!host) return
 
     const heights = Array.from(host.children).map(
       (child) => (child as HTMLElement).getBoundingClientRect().height,
     )
-    lastMeasuredKey.current = inputKey
+    measuredRef.current = { pageSize, blocks }
     setPages(paginateBlocks(blocks, heights, metrics.contentHeightPx))
-  }, [inputKey, blocks, metrics.contentHeightPx])
+  }, [measuring, pageSize, blocks, metrics.contentHeightPx])
 
   if (measuring || pages === null) {
     return (

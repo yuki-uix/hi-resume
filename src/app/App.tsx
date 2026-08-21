@@ -1,7 +1,8 @@
-import { DevPreviewPage } from './DevPreviewPage'
+import { SectionsEditor } from '../features/editor/sections/SectionsEditor'
 
-// M1 task #3 ships the template + pagination preview only. The editor, storage
-// and export arrive in later tasks, so the app entry is the dev preview page.
+// M1 task #4 adds the section editor on top of the #3 pagination preview. The
+// editor keeps the same `?fixture=` / `?pageSize=` query params, so the
+// pagination e2e from #3 continues to address the preview unchanged.
 export function App() {
-  return <DevPreviewPage />
+  return <SectionsEditor />
 }

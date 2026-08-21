@@ -1,0 +1,299 @@
+/* Section editor chrome: left column + preview stage + hover toolbar + dialogs.
+ *
+ * Hard constraint: pagination measures each template block's
+ * `getBoundingClientRect().height` while the block is laid out off-screen.
+ * Any *inherited* typography on an ancestor of that measurer (`.preview-stage`,
+ * `.sections-editor`, `body`) changes those measured heights and silently
+ * shifts page boundaries. So this file never sets font-family / font-size /
+ * line-height / letter-spacing on a measurer ancestor — typography is scoped to
+ * the sidebar, the dialogs and the (out-of-flow) toolbar only.
+ */
+
+.sections-editor {
+  display: flex;
+  height: 100vh;
+  background: #eef0f3;
+}
+
+/* ---- left column ---- */
+
+.sections-sidebar {
+  flex-shrink: 0;
+  width: 300px;
+  box-sizing: border-box;
+  padding: 16px;
+  background: #fff;
+  border-right: 1px solid #d9dbe0;
+  overflow-y: auto;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: #1a1a1a;
+}
+
+.sections-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sections-sidebar__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sections-sidebar__add {
+  padding: 5px 10px;
+  font-size: 12px;
+  border: 1px solid #1a4d8f;
+  background: #1a4d8f;
+  color: #fff;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.sections-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.section-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e4e8;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.section-row[data-visible='false'] {
+  opacity: 0.55;
+}
+
+.section-row[data-dragging='true'] {
+  opacity: 0.75;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.section-row__handle {
+  flex-shrink: 0;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  cursor: grab;
+  color: #8a8f98;
+  font-size: 14px;
+  touch-action: none;
+}
+
+.section-row__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.section-row__toggle {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #555;
+  cursor: pointer;
+}
+
+.section-row__toggle-label {
+  user-select: none;
+}
+
+.section-row button {
+  flex-shrink: 0;
+  padding: 3px 6px;
+  font-size: 11px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.section-row button:hover {
+  background: #eceef1;
+}
+
+.section-row__delete {
+  color: #b3241c;
+  border-color: #e0b6b3 !important;
+}
+
+/* ---- preview stage ---- */
+
+.sections-editor__preview {
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-stage {
+  position: relative;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* ---- hover toolbar (overlay, outside the measurement container) ---- */
+
+.section-toolbar {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #c6cad1;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  white-space: nowrap;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.section-toolbar__button {
+  padding: 3px 8px;
+  font-size: 12px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.section-toolbar__button:hover {
+  background: #eceef1;
+}
+
+/* ---- dialogs ---- */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 22, 26, 0.4);
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: #1a1a1a;
+}
+
+.dialog {
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  box-sizing: border-box;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.dialog__title {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dialog__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  font-size: 13px;
+  border: 1px solid #c6cad1;
+  border-radius: 5px;
+}
+
+.dialog__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.dialog__layout {
+  margin: 14px 0 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  gap: 16px;
+}
+
+.dialog__layout legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #555;
+}
+
+.dialog__layout label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.dialog__button {
+  padding: 6px 14px;
+  font-size: 13px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.dialog__button--primary {
+  background: #1a4d8f;
+  border-color: #1a4d8f;
+  color: #fff;
+}
+
+.dialog__button--danger {
+  background: #b3241c;
+  border-color: #b3241c;
+  color: #fff;
+}
+
+.dialog__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- print: the sidebar and toolbar never reach the PDF ---- */
+
+@media print {
+  .sections-editor {
+    display: block;
+    height: auto;
+    background: none;
+  }
+
+  .sections-sidebar,
+  .section-toolbar {
+    display: none !important;
+  }
+
+  .sections-editor__preview {
+    min-width: 0;
+  }
+
+  .preview-stage {
+    height: auto;
+    overflow: visible;
+  }
+}
