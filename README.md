@@ -6,10 +6,23 @@
 
 ## 当前状态
 
-项目处于产品定义阶段，当前包含：
+M1 进行中。已有产品文档和领域层（条目池类型、组合解析、渲染模型、工作区 schema），
+编辑器 UI、持久化和导出尚未开始。
 
 - [MVP PRD](docs/MVP-PRD.md)
 - [架构与技术决策](docs/ARCHITECTURE.md)
+
+## 开发
+
+```bash
+pnpm install
+pnpm test              # Vitest
+pnpm typecheck         # 全项目
+pnpm typecheck:domain  # 只编译 src/domain，且不带 lib.dom
+pnpm dev               # Vite
+```
+
+`typecheck:domain` 用来保证领域层不依赖 DOM、React 或存储，可以单独在 node 里跑。
 
 ## 核心概念
 
