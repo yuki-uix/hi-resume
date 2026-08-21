@@ -4,6 +4,7 @@ import { buildRenderModel } from '../../../domain/composition/render-model'
 import type { PageSize } from '../../../domain/composition/types'
 import type { SectionId } from '../../../domain/pool/types'
 import { buildBlocks } from '../../../templates/standard'
+import { PrintButton } from '../../export/PrintButton'
 import { EntriesEditor } from '../entries/EntriesEditor'
 import { EditorStoreContext } from '../editor-store-context'
 import type { EditorStore } from '../editor-store'
@@ -57,6 +58,9 @@ export function SectionsEditor({
           </div>
           {statusLine && <div className="sections-sidebar__status">{statusLine}</div>}
           <SectionList onRename={setRenamingId} onDelete={setDeletingId} />
+          <div className="sections-sidebar__print">
+            <PrintButton />
+          </div>
           {backupControls}
         </aside>
 
