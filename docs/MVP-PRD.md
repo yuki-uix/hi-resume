@@ -332,6 +332,7 @@ type Section = {
       | "education" | "skill" | "language" | "custom"
   title: string                              // 默认标题，可被主简历或版本重命名
   layout: "entries" | "text"                 // 列表型或纯文本型
+  text?: string                              // 文本型区块的正文，如个人简介
   removable: boolean                         // 内置区块为 false，只能隐藏
 }
 
@@ -351,14 +352,13 @@ type ResumeComposition = {
   sectionTitles: Record<SectionId, string>        // 重命名，缺省用 Section.title
   entrySelection: Record<SectionId, EntryId[]>    // 选中的条目，数组顺序即展示顺序
   bulletSelection: Record<EntryId, BulletId[]>    // 选中的 bullet，数组顺序即展示顺序
-  summary?: string
 }
 
 type ResumeVariant = {
   id: string
   name: string
   composition: Partial<ResumeComposition>    // 只存与主简历不同的部分
-  textOverrides: Record<BulletId | EntryId | "summary", string>
+  textOverrides: Record<BulletId | EntryId | SectionId, string>  // 正文覆盖；标题走 sectionTitles
   application: Application                   // 投递侧信息
   createdAt: string
   updatedAt: string
@@ -386,6 +386,14 @@ render(pool, master, variant)
 ```
 
 `resolveComposition` 逐字段回退：变体没写的字段用主简历的值。这样主简历的新增内容会自动流入未调整过该字段的版本。
+
+### 文本型区块
+
+个人简介和自定义文本区块的正文存在池里（`Section.text`），和条目、bullet 的正文一样。岗位版本要改写时走 `textOverrides[sectionId]`，和改写一条 bullet 是同一套机制。
+
+不给个人简介单开字段。它就是一个 `kind: "summary"`、`layout: "text"` 的区块，走通用路径。这样自定义文本区块不需要再加任何东西。
+
+注意 `sectionTitles` 和 `textOverrides` 都按 `SectionId` 索引，但含义不同：前者是区块**标题**，后者是区块**正文**。
 
 导入导出以 JSON Resume 字段作为互操作参考，但内部模型必须保留稳定 ID、选择、排序和投递信息。
 

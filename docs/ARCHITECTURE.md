@@ -73,6 +73,12 @@ render(pool, master, variant)
 
 同理，`ResumeVariant` 的类型在 M1 就定义，只是没有实例。
 
+### 文本内容与条目内容走同一条路
+
+内容一律存在池里：条目的标题、bullet 的文本、文本型区块的正文（`Section.text`）。组合只负责「选了哪些、什么顺序」，覆盖只负责「这个版本把哪段文字换成了什么」。
+
+因此渲染模型里 `RenderSection` 既有 `entries`，也有 `text`：`layout: "entries"` 的区块用前者，`layout: "text"` 的用后者。缺了 `text` 的话文本型区块渲染出来是空的——这是 issue #2 实现时暴露出的契约缺口。
+
 ### 稳定 ID
 
 区块、条目和 bullet 都必须有稳定 ID。选择和排序全部按 ID 引用，不使用数组下标 —— 下标会在排序或删除后指向错误内容。
