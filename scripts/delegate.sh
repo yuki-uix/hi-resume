@@ -50,7 +50,8 @@ done
 BASE_URL=${DEEPSEEK_BASE_URL:-$([ -n "$ENV_FILE" ] && read_env "$ENV_FILE" DEEPSEEK_BASE_URL || true)}
 BASE_URL=${BASE_URL:-https://api.deepseek.com/anthropic}
 MODEL=${DEEPSEEK_MODEL:-$([ -n "$ENV_FILE" ] && read_env "$ENV_FILE" DEEPSEEK_MODEL || true)}
-MODEL=${MODEL:-deepseek-chat}
+MODEL=${MODEL:-deepseek-v4-pro}
+MAX_TURNS=${DELEGATE_MAX_TURNS:-200}
 
 [ -d "$WORKTREE" ] || fail "worktree 不存在: $WORKTREE"
 [ -f "$PROMPT" ]   || fail "prompt 文件不存在: $PROMPT"
@@ -72,15 +73,25 @@ echo "凭据     : ${ENV_FILE:-环境变量}"
 echo "log      : $LOG"
 echo
 
+# 剥离父进程的 Claude Code 环境变量。
+# 不剥的话子 CLI 会以为宿主通过 CLAUDE_CODE_MESSAGING_SOCKET 供认证，
+# 一直等一个永远不会到的 token，表现为零输出的无限挂起。
+UNSET_ARGS=""
+for v in $(env | sed -E 's/=.*//' | grep -E '^(CLAUDE_|CLAUDECODE$)'); do
+  UNSET_ARGS="$UNSET_ARGS -u $v"
+done
+
 set +e
 (
   cd "$WORKTREE" || exit 3
-  ANTHROPIC_BASE_URL="$BASE_URL" \
-  ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY" \
-  ANTHROPIC_MODEL="$MODEL" \
-  claude -p "$(cat "$PROMPT")" \
-    --output-format stream-json --verbose \
-    --allowedTools "$ALLOWED"
+  env $UNSET_ARGS \
+    ANTHROPIC_BASE_URL="$BASE_URL" \
+    ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY" \
+    ANTHROPIC_MODEL="$MODEL" \
+    claude -p "$(cat "$PROMPT")" \
+      --output-format stream-json --verbose \
+      --max-turns "$MAX_TURNS" \
+      --allowedTools "$ALLOWED"
 ) | tee "$LOG"
 RUN_STATUS=${PIPESTATUS[0]}
 set -e
@@ -94,6 +105,8 @@ SUBTYPE=$( jq -r '.subtype  // "unknown"'    <<<"$RESULT")
 NUM_TURNS=$(jq -r '.num_turns // 0'          <<<"$RESULT")
 API_ERR=$( jq -r '.api_error_status // empty'<<<"$RESULT")
 TOOL_CALLS=$(jq -s '[.[] | .. | objects | select(.type? == "tool_use")] | length' "$LOG")
+IN_TOK=$(  jq -r '.usage.input_tokens  // 0' <<<"$RESULT")
+OUT_TOK=$( jq -r '.usage.output_tokens // 0' <<<"$RESULT")
 
 echo
 echo "── payload 核对 ──────────────"
@@ -103,6 +116,8 @@ printf "is_error   : %s\n" "$IS_ERROR"
 printf "api_error  : %s\n" "${API_ERR:-无}"
 printf "轮次       : %s\n" "$NUM_TURNS"
 printf "工具调用   : %s\n" "$TOOL_CALLS"
+printf "token      : in %s / out %s\n" "$IN_TOK" "$OUT_TOK"
+echo   "注意       : result 里的 total_cost_usd 按 Anthropic 价目表计算，对 DeepSeek 无意义，不要当成本指标"
 echo "─────────────────────────────"
 
 [ "$IS_ERROR" = "false" ] || fail "is_error=true，任务失败（subtype=$SUBTYPE）"
