@@ -9,6 +9,13 @@ import './preview.css'
 type Props = {
   blocks: PageBlock[]
   pageSize: PageSize
+  /**
+   * Keep the off-screen measurer mounted alongside the pages. The measurer is
+   * normally removed once the page assignment is computed; the e2e gate that
+   * pins "measurer typography == page typography" needs it present to read its
+   * `getComputedStyle`. Opt-in via `?measurer=1` on the dev page.
+   */
+  debugMeasurer?: boolean
 }
 
 /**
@@ -22,9 +29,10 @@ type Props = {
  *
  * The measuring pass renders into an off-screen, hidden container that is
  * removed as soon as the page assignment is computed, so the steady-state DOM
- * contains the page containers exactly once.
+ * contains the page containers exactly once (unless `debugMeasurer` keeps the
+ * measurer around for the typography gate test).
  */
-export function PaginatedPreview({ blocks, pageSize }: Props) {
+export function PaginatedPreview({ blocks, pageSize, debugMeasurer = false }: Props) {
   const metrics = pageMetrics(pageSize)
   const [pages, setPages] = useState<PageBlock[][] | null>(null)
   const measurerRef = useRef<HTMLDivElement | null>(null)
@@ -55,21 +63,23 @@ export function PaginatedPreview({ blocks, pageSize }: Props) {
     setPages(paginateBlocks(blocks, heights, metrics.contentHeightPx))
   }, [measuring, pageSize, blocks, metrics.contentHeightPx])
 
+  const measurer = (
+    <div
+      ref={measurerRef}
+      className="pagination-measurer resume-typography"
+      style={{ width: metrics.contentWidthPx }}
+      aria-hidden="true"
+    >
+      {blocks.map((block) => (
+        <div key={block.key} style={{ margin: 0, padding: 0 }}>
+          {block.node}
+        </div>
+      ))}
+    </div>
+  )
+
   if (measuring || pages === null) {
-    return (
-      <div
-        ref={measurerRef}
-        className="pagination-measurer"
-        style={{ width: metrics.contentWidthPx }}
-        aria-hidden="true"
-      >
-        {blocks.map((block) => (
-          <div key={block.key} style={{ margin: 0, padding: 0 }}>
-            {block.node}
-          </div>
-        ))}
-      </div>
-    )
+    return measurer
   }
 
   return (
@@ -79,7 +89,7 @@ export function PaginatedPreview({ blocks, pageSize }: Props) {
         {pages.map((pageBlocks, index) => (
           <section
             key={index}
-            className="resume-page"
+            className="resume-page resume-typography"
             data-page-index={index}
             style={{
               width: metrics.widthPx,
@@ -95,6 +105,7 @@ export function PaginatedPreview({ blocks, pageSize }: Props) {
           </section>
         ))}
       </div>
+      {debugMeasurer ? measurer : null}
     </>
   )
 }

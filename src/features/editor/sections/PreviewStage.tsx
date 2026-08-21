@@ -19,10 +19,12 @@ export function PreviewStage({
   blocks,
   pageSize,
   onRenameSection,
+  debugMeasurer = false,
 }: {
   blocks: PageBlock[]
   pageSize: PageSize
   onRenameSection: (id: SectionId) => void
+  debugMeasurer?: boolean
 }) {
   const store = useSectionsStore()
   const workspace = store((state) => state.workspace)
@@ -112,7 +114,7 @@ export function PreviewStage({
       onMouseOver={handleMouseOver}
       onMouseLeave={handleMouseLeave}
     >
-      <PaginatedPreview blocks={blocks} pageSize={pageSize} />
+      <PaginatedPreview blocks={blocks} pageSize={pageSize} debugMeasurer={debugMeasurer} />
       {hovered && position && (
         <SectionToolbar
           sectionId={hovered}

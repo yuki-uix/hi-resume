@@ -21,6 +21,7 @@ export function SectionsEditor() {
   const params = new URLSearchParams(window.location.search)
   const fixture = params.get('fixture') ?? 'b'
   const pageSize: PageSize = params.get('pageSize') === 'Letter' ? 'Letter' : 'A4'
+  const debugMeasurer = params.get('measurer') === '1'
 
   const [store] = useState(() => {
     const makeWorkspace = FIXTURES[fixture]
@@ -48,7 +49,7 @@ export function SectionsEditor() {
         </aside>
 
         <main className="sections-editor__preview">
-          <PreviewStage blocks={blocks} pageSize={pageSize} onRenameSection={setRenamingId} />
+          <PreviewStage blocks={blocks} pageSize={pageSize} onRenameSection={setRenamingId} debugMeasurer={debugMeasurer} />
         </main>
       </div>
 
