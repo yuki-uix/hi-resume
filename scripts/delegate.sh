@@ -73,6 +73,18 @@ echo "凭据     : ${ENV_FILE:-环境变量}"
 echo "log      : $LOG"
 echo
 
+# 受托方的角色声明。
+#
+# 子 CLI 会继承本仓库的项目记忆目录，其中记着「实现交给 DeepSeek，我只做
+# planning 和 review」。那条是写给 review 方的，但受托方读到后会以为自己也该
+# 往下委托，于是只写规格不写代码（issue #20 第一次运行就是这样停在第 27 轮）。
+# 这里显式纠正身份。
+ROLE_NOTE="你是本次任务的实现者本人，直接动手写代码。
+
+本仓库的项目记忆里可能写着「实现交给 DeepSeek，我只做 planning 和 review」——那条是写给委派方的，**你就是被委派的那一方**。不要再向任何人委托，不要只产出规格或计划，不要询问预算或等待确认后再开始。
+
+唯一该停下来提问的情况：任务规格本身自相矛盾，或你发现了需要产品决策的真实权衡。那时在对应 issue 下留言说明并停下，其余情况一律自己完成。"
+
 # 剥离父进程的 Claude Code 环境变量。
 # 不剥的话子 CLI 会以为宿主通过 CLAUDE_CODE_MESSAGING_SOCKET 供认证，
 # 一直等一个永远不会到的 token，表现为零输出的无限挂起。
@@ -89,6 +101,7 @@ set +e
     ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY" \
     ANTHROPIC_MODEL="$MODEL" \
     claude -p "$(cat "$PROMPT")" \
+      --append-system-prompt "$ROLE_NOTE" \
       --output-format stream-json --verbose \
       --max-turns "$MAX_TURNS" \
       --allowedTools "$ALLOWED"
