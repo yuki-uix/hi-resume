@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "typecheck": "tsc --noEmit",
-    "typecheck:domain": "tsc --noEmit -p tsconfig.domain.json"
+    "typecheck:domain": "tsc --noEmit -p tsconfig.domain.json",
+    "font:build": "bash scripts/build-font.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -28,6 +29,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "pdfjs-dist": "^6.2.108",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"

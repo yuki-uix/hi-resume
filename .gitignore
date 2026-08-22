@@ -15,6 +15,9 @@ build/
 .env.*
 !.env.example
 
+# Font build tooling (scripts/build-font.sh)
+.fontenv/
+
 # Desktop packaging
 src-tauri/target/
 src-tauri/gen/

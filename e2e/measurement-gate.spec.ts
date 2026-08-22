@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { RESUME_FONT_FAMILY } from '../src/features/preview/fonts'
+
 /**
  * The measurement-isolation gate for issue #5.
  *
@@ -69,6 +71,18 @@ test('measurement gate: measurer and page blocks share one typography root', asy
   // The shared root must actually be the resume typography, not the browser
   // default (Times) — otherwise the equality above would be trivially "both
   // wrong" and the gate would pass while pagination still drifted.
+  //
+  // The bundled CJK font must be the *head* of the stack, not merely present
+  // somewhere behind a system font that happens to also match. `fontFamily`
+  // is the full resolved list (e.g. `"Source Han Sans SC", system-ui, …`), so
+  // peel the first entry and compare it against the family we declare.
+  const firstFamily = measurer['font-family']
+    .split(',')[0]
+    ?.trim()
+    .replace(/^["']|["']$/g, '')
+  expect(firstFamily).toBe(RESUME_FONT_FAMILY)
+  // The stack still ends in a system fallback (so the resume degrades if the
+  // bundled font is ever missing), and the size pin stays put.
   expect(measurer['font-family']).toContain('system-ui')
   expect(measurer['font-size']).toBe('12.5px')
 })

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 
 import type { PageSize } from '../../domain/composition/types'
+import { awaitResumeFont } from './fonts'
 import { CSS_PAGE_SIZE, pageMetrics } from './page-metrics'
 import { paginateBlocks } from './paginate'
 import type { PageBlock } from './types'
@@ -56,11 +57,24 @@ export function PaginatedPreview({ blocks, pageSize, debugMeasurer = false }: Pr
     const host = measurerRef.current
     if (!host) return
 
-    const heights = Array.from(host.children).map(
-      (child) => (child as HTMLElement).getBoundingClientRect().height,
-    )
-    measuredRef.current = { pageSize, blocks }
-    setPages(paginateBlocks(blocks, heights, metrics.contentHeightPx))
+    // Hard constraint #2: the measurer renders the blocks with the bundled CJK
+    // font, but those heights are only correct once the font has loaded. Reading
+    // them before that would paginate against the fallback font's metrics, then
+    // the pages would silently reflow when the font swaps in. Gate on the font,
+    // then measure.
+    let cancelled = false
+    void (async () => {
+      await awaitResumeFont()
+      if (cancelled) return
+      const heights = Array.from(host.children).map(
+        (child) => (child as HTMLElement).getBoundingClientRect().height,
+      )
+      measuredRef.current = { pageSize, blocks }
+      setPages(paginateBlocks(blocks, heights, metrics.contentHeightPx))
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [measuring, pageSize, blocks, metrics.contentHeightPx])
 
   const measurer = (

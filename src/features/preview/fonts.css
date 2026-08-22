@@ -1,0 +1,30 @@
+/*
+ * The bundled resume font: Source Han Sans SC, the full unified-ideograph
+ * block, built into two static TrueType (glyf) weights (see
+ * scripts/build-font.py). Nothing is fetched at runtime.
+ *
+ * Why two static glyf builds and not the upstream variable font or a CFF
+ * build (issue #20): Chromium's print-to-PDF pipeline embeds CFF-outline and
+ * variable fonts as Type 3 procedures, and it builds each embedded font's
+ * ToUnicode map by reverse-looking-up cmap. Source Han Sans shares glyphs
+ * between unified ideographs and their Kangxi radicals (e.g. 工 U+5DE5 and
+ * ⼯ U+2F2F), so the reverse lookup lands on the radical. The build script
+ * pins the variable font into static TrueType (embedded as CIDFontType2) and
+ * drops every U+2E80–U+2FDF cmap mapping, so the reverse lookup only ever
+ * finds the real ideograph.
+ */
+@font-face {
+  font-family: 'Source Han Sans SC';
+  src: url('./SourceHanSansSC-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Source Han Sans SC';
+  src: url('./SourceHanSansSC-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
