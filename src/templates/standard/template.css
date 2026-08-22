@@ -13,7 +13,7 @@
  * same font metrics it is rendered with — never inherited independently from
  * two different ancestors. */
 .resume-typography {
-  font-family: 'Source Han Sans SC VF', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Source Han Sans SC', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   color: #1a1a1a;
   font-size: 12.5px;
   line-height: 1.45;

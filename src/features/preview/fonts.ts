@@ -7,7 +7,7 @@
  * #2).
  */
 
-export const RESUME_FONT_FAMILY = 'Source Han Sans SC VF'
+export const RESUME_FONT_FAMILY = 'Source Han Sans SC'
 
 /**
  * Resolve once the resume font is ready to be measured against.

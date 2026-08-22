@@ -1,19 +1,30 @@
 /*
  * The bundled resume font: Source Han Sans SC, the full unified-ideograph
- * block, as a single variable font with TrueType (glyf) outlines.
+ * block, built into two static TrueType (glyf) weights (see
+ * scripts/build-font.py). Nothing is fetched at runtime.
  *
- * Why glyf and not the CFF/OTF build the upstream project ships by default:
- * Chromium's print-to-PDF pipeline embeds CFF-outline fonts as Type 3
- * procedures (whose ToUnicode maps land on Kangxi radicals), while
- * TrueType-outline fonts embed as CIDFontType2 with a correct ToUnicode map.
- * This woff2 is the upstream TrueType variable build; its `wght` axis
- * (250–900) covers the two weights the template uses — 400 for body text and
- * 700 for names/titles — in a single file, so both embed as one CID font.
+ * Why two static glyf builds and not the upstream variable font or a CFF
+ * build (issue #20): Chromium's print-to-PDF pipeline embeds CFF-outline and
+ * variable fonts as Type 3 procedures, and it builds each embedded font's
+ * ToUnicode map by reverse-looking-up cmap. Source Han Sans shares glyphs
+ * between unified ideographs and their Kangxi radicals (e.g. 工 U+5DE5 and
+ * ⼯ U+2F2F), so the reverse lookup lands on the radical. The build script
+ * pins the variable font into static TrueType (embedded as CIDFontType2) and
+ * drops every U+2E80–U+2FDF cmap mapping, so the reverse lookup only ever
+ * finds the real ideograph.
  */
 @font-face {
-  font-family: 'Source Han Sans SC VF';
-  src: url('./SourceHanSansSC-VF.ttf.woff2') format('woff2');
-  font-weight: 250 900;
+  font-family: 'Source Han Sans SC';
+  src: url('./SourceHanSansSC-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Source Han Sans SC';
+  src: url('./SourceHanSansSC-Bold.woff2') format('woff2');
+  font-weight: 700;
   font-style: normal;
   font-display: block;
 }
