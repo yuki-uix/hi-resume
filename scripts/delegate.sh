@@ -93,10 +93,22 @@ for v in $(env | sed -E 's/=.*//' | grep -E '^(CLAUDE_|CLAUDECODE$)'); do
   UNSET_ARGS="$UNSET_ARGS -u $v"
 done
 
+# 阻止系统睡眠。这台机器的 pmset 是 sleep=1（闲置一分钟即系统睡眠），
+# 委托一旦跑起来就没人碰键盘，API 响应会在半途被切断——issue #20 的一轮
+# 就是这么死的（91 轮、约 ¥4.4，terminal_reason=api_error，
+# "Your computer went to sleep mid-response"）。
+# caffeinate 作为父进程存在，本命令结束后自动退出，不影响系统其它时段。
+KEEP_AWAKE=""
+if command -v caffeinate >/dev/null; then
+  KEEP_AWAKE="caffeinate -is"
+else
+  echo "⚠️ 找不到 caffeinate，长任务可能被系统睡眠中断" >&2
+fi
+
 set +e
 (
   cd "$WORKTREE" || exit 3
-  env $UNSET_ARGS \
+  $KEEP_AWAKE env $UNSET_ARGS \
     ANTHROPIC_BASE_URL="$BASE_URL" \
     ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY" \
     ANTHROPIC_MODEL="$MODEL" \
