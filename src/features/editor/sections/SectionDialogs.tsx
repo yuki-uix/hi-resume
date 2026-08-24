@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react'
 
-import type { Workspace } from '../../../domain/composition/types'
+import type { ResumeComposition, Workspace } from '../../../domain/composition/types'
 import type { SectionId, SectionLayout } from '../../../domain/pool/types'
 import { useEditorStore } from '../editor-store-context'
+import { useEditorComposition } from '../use-editor-composition'
 
 /**
  * The three section dialogs share one modal shell. Each is mounted only while
@@ -35,14 +36,15 @@ function DialogShell({
 }
 
 /** The display title of a section: its rename, or the pool default. */
-function sectionTitle(workspace: Workspace, id: SectionId): string {
+function sectionTitle(workspace: Workspace, composition: ResumeComposition, id: SectionId): string {
   const section = workspace.pool.sections[id]
-  return workspace.master.sectionTitles[id] ?? section?.title ?? ''
+  return composition.sectionTitles[id] ?? section?.title ?? ''
 }
 
 export function RenameDialog({ sectionId, onClose }: { sectionId: SectionId; onClose: () => void }) {
   const store = useEditorStore()
-  const [value, setValue] = useState(() => sectionTitle(store.getState().workspace, sectionId))
+  const composition = useEditorComposition()
+  const [value, setValue] = useState(() => sectionTitle(store.getState().workspace, composition, sectionId))
 
   const submit = () => {
     const title = value.trim()
@@ -155,7 +157,8 @@ export function AddSectionDialog({ onClose }: { onClose: () => void }) {
 
 export function DeleteSectionDialog({ sectionId, onClose }: { sectionId: SectionId; onClose: () => void }) {
   const store = useEditorStore()
-  const title = sectionTitle(store.getState().workspace, sectionId)
+  const composition = useEditorComposition()
+  const title = sectionTitle(store.getState().workspace, composition, sectionId)
 
   const confirm = () => {
     store.getState().removeCustomSection(sectionId)

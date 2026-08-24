@@ -1,8 +1,9 @@
 import { useState } from 'react'
 
-import type { Workspace } from '../../../domain/composition/types'
+import type { ResumeComposition, Workspace } from '../../../domain/composition/types'
 import type { Basics, BasicsLink, EntryId, SectionId } from '../../../domain/pool/types'
 import { useEditorStore } from '../editor-store-context'
+import { useEditorComposition } from '../use-editor-composition'
 import { EntryList } from './EntryList'
 import './entries-editor.css'
 
@@ -16,21 +17,28 @@ import './entries-editor.css'
 export function EntriesEditor() {
   const store = useEditorStore()
   const workspace = store((state) => state.workspace)
+  const target = store((state) => state.target)
+  const composition = useEditorComposition()
   const [deletingEntryId, setDeletingEntryId] = useState<EntryId | null>(null)
 
-  const sections = workspace.master.sectionOrder
+  const editingVariant = target.kind === 'variant'
+
+  // Order and titles come from the *resolved* composition of the current target,
+  // so a variant's inherited/overridden section order and rename titles drive the
+  // middle column too — not just the preview.
+  const sections = composition.sectionOrder
     .map((id) => workspace.pool.sections[id])
     .filter((section): section is NonNullable<typeof section> => section !== undefined)
 
   return (
     <aside className="entries-editor" data-testid="entries-editor">
-      <BasicsCard />
+      {!editingVariant && <BasicsCard />}
 
       {sections.map((section) => (
         <section key={section.id} className="entries-section" data-section-edit-id={section.id}>
-          <h3 className="entries-section__title">{displayTitle(workspace, section.id)}</h3>
+          <h3 className="entries-section__title">{displayTitle(workspace, composition, section.id)}</h3>
           {section.layout === 'text' ? (
-            <TextSectionBody sectionId={section.id} />
+            <TextSectionBody sectionId={section.id} readOnly={editingVariant} />
           ) : (
             <EntryList sectionId={section.id} onDeleteEntry={setDeletingEntryId} />
           )}
@@ -42,9 +50,9 @@ export function EntriesEditor() {
   )
 }
 
-function displayTitle(workspace: Workspace, id: SectionId): string {
+function displayTitle(workspace: Workspace, composition: ResumeComposition, id: SectionId): string {
   const section = workspace.pool.sections[id]
-  return workspace.master.sectionTitles[id] ?? section?.title ?? ''
+  return composition.sectionTitles[id] ?? section?.title ?? ''
 }
 
 /** Contact header, edited field by field. Not selectable, so it carries no ID. */
@@ -144,10 +152,14 @@ function BasicsCard() {
   )
 }
 
-/** A text-layout section's body prose (个人简介 etc.). */
-function TextSectionBody({ sectionId }: { sectionId: SectionId }) {
+/** A text-layout section's body prose (个人简介 etc.). Master-editable; read-only on a variant. */
+function TextSectionBody({ sectionId, readOnly }: { sectionId: SectionId; readOnly: boolean }) {
   const store = useEditorStore()
   const text = store((state) => state.workspace.pool.sections[sectionId]?.text ?? '')
+
+  if (readOnly) {
+    return <p className="entries-textarea entries-textarea--readonly">{text}</p>
+  }
 
   return (
     <textarea

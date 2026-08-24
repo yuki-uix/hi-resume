@@ -26,12 +26,16 @@ describe('createEditorStore', () => {
       'reorderSections',
       'replaceWorkspace',
       'setBasics',
+      'setBulletSelected',
       'setBulletText',
       'setEntryPeriod',
+      'setEntrySelected',
       'setEntrySubtitle',
       'setEntryTitle',
       'setSectionText',
       'setSectionVisible',
+      'setTarget',
+      'target',
       'workspace',
     ])
 
