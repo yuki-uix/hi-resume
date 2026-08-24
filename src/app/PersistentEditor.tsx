@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Workspace } from '../domain/composition/types'
 import { SectionsEditor } from '../features/editor/sections/SectionsEditor'
@@ -7,7 +7,10 @@ import { WorkspaceBackup } from '../features/export/WorkspaceBackup'
 import { AUTOSAVE_DEBOUNCE_MS, createAutosaveController, type AutosaveController } from '../persistence/autosave'
 import { createEmptyWorkspace } from '../persistence/empty-workspace'
 import { SchemaVersionMismatchError, WorkspaceStorageError } from '../persistence/errors'
+import { requestPersistentStorage } from '../persistence/persist'
 import { loadWorkspace, saveWorkspace } from '../persistence/workspace-db'
+import { StorageStatus } from './StorageStatus'
+import type { PersistState } from './storage-status'
 import './app.css'
 
 /**
@@ -68,7 +71,21 @@ function ReadyEditor({ workspace, initialSave }: { workspace: Workspace; initial
 
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
   const [saveError, setSaveError] = useState<WorkspaceStorageError | null>(null)
+  const [persistState, setPersistState] = useState<PersistState>('pending')
   const controllerRef = useRef<AutosaveController | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    // Ask for persistent storage once at startup. `pending` until it resolves,
+    // so the status line never briefly claims "granted" before the answer is in.
+    void requestPersistentStorage().then((granted) => {
+      if (cancelled) return
+      setPersistState(granted ? 'granted' : 'denied')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const controller = createAutosaveController({
@@ -120,33 +137,10 @@ function ReadyEditor({ workspace, initialSave }: { workspace: Workspace; initial
     <SectionsEditor
       store={store}
       pageSize={pageSize}
-      statusLine={<SaveStatus lastSavedAt={lastSavedAt} error={saveError} />}
+      statusLine={<StorageStatus lastSavedAt={lastSavedAt} error={saveError} persistState={persistState} />}
       backupControls={<WorkspaceBackup />}
     />
   )
-}
-
-function SaveStatus({ lastSavedAt, error }: { lastSavedAt: number | null; error: WorkspaceStorageError | null }) {
-  const content: ReactNode = error
-    ? `保存失败：${error.message}`
-    : lastSavedAt === null
-      ? '尚未保存'
-      : `最近保存 ${formatTime(lastSavedAt)}`
-
-  return (
-    <span
-      className={`sections-sidebar__status${error ? ' sections-sidebar__status--error' : ''}`}
-      data-testid="last-saved"
-    >
-      {content}
-    </span>
-  )
-}
-
-function formatTime(at: number): string {
-  const d = new Date(at)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 function Loading() {
