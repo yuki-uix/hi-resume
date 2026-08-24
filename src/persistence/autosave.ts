@@ -26,7 +26,10 @@ export type SaveWorkspace = (workspace: Workspace) => Promise<void>
 export type AutosaveController = {
   /** Record an edit; schedules a debounced save. */
   notify: () => void
-  /** Cancel any pending debounce and save the latest workspace immediately. */
+  /**
+   * Cancel any pending debounce and save the latest workspace immediately.
+   * Does nothing when no edit is waiting to be written.
+   */
   flush: () => Promise<void>
   dispose: () => void
 }
@@ -47,12 +50,23 @@ export function createAutosaveController(options: {
 
   let timer: ReturnType<typeof setTimeout> | null = null
   let disposed = false
+  // Whether an edit has arrived that no completed save has covered yet. Without
+  // it `flush` would write on every page close even when nothing changed, and a
+  // save is no longer free: since #45 it also writes the user's file, where a
+  // pointless rewrite can clobber a change another program made while this tab
+  // sat idle.
+  let dirty = false
 
   const saveNow = async (): Promise<void> => {
+    // Cleared before the await, so an edit landing mid-save marks the controller
+    // dirty again rather than being swallowed by this save's completion.
+    dirty = false
     try {
       await save(getWorkspace())
       onSaved?.(now())
     } catch (error) {
+      // The work is still unwritten, so a later flush must try again.
+      dirty = true
       onError?.(error)
       throw error
     }
@@ -60,10 +74,14 @@ export function createAutosaveController(options: {
 
   const notify = (): void => {
     if (disposed) return
+    dirty = true
     if (timer !== null) clearTimeout(timer)
     timer = setTimeout(() => {
       timer = null
-      void saveNow()
+      // Nothing awaits the debounced save, and `saveNow` rethrows for `flush`'s
+      // callers, so the rejection is settled here. The failure is not lost: it
+      // has already gone to `onError`, which is what puts it on screen.
+      void saveNow().catch(() => {})
     }, debounceMs)
   }
 
@@ -73,6 +91,7 @@ export function createAutosaveController(options: {
       clearTimeout(timer)
       timer = null
     }
+    if (!dirty) return
     await saveNow()
   }
 
