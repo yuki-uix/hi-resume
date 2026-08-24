@@ -4,6 +4,7 @@ import type {
   Workspace,
 } from '../../../domain/composition/types'
 import type { BulletId, Section, SectionId, SectionLayout } from '../../../domain/pool/types'
+import { removalIds, removeFromVariants } from '../removal/removal'
 
 /**
  * Every section operation is one command, and every command lands on the pool
@@ -156,7 +157,7 @@ export function applySectionCommand(workspace: Workspace, command: SectionComman
       const sectionTitles = { ...master.sectionTitles }
       delete sectionTitles[command.id]
 
-      return {
+      const next = {
         ...workspace,
         pool: { ...workspace.pool, sections, entries, bullets },
         master: {
@@ -168,6 +169,9 @@ export function applySectionCommand(workspace: Workspace, command: SectionComman
           bulletSelection,
         },
       }
+      // Variants that materialised this section's order/visibility/selection (or
+      // overrode its body text) now hold dangling references — clean them.
+      return removeFromVariants(next, removalIds.removeCustomSection(workspace, command))
     }
   }
 }

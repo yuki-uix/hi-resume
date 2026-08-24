@@ -44,9 +44,11 @@ import { useTextOverrides } from '../use-text-overrides'
 export function EntryList({
   sectionId,
   onDeleteEntry,
+  onDeleteBullet,
 }: {
   sectionId: SectionId
   onDeleteEntry: (id: EntryId) => void
+  onDeleteBullet: (entryId: EntryId, bulletId: BulletId) => void
 }) {
   const store = useEditorStore()
   const workspace = store((state) => state.workspace)
@@ -88,6 +90,7 @@ export function EntryList({
               editable={editable}
               overrides={overrides}
               onDeleteEntry={onDeleteEntry}
+              onDeleteBullet={onDeleteBullet}
             />
           ))}
         </ul>
@@ -113,6 +116,7 @@ function EntryRow({
   editable,
   overrides,
   onDeleteEntry,
+  onDeleteBullet,
 }: {
   sectionId: SectionId
   entry: Entry
@@ -120,6 +124,7 @@ function EntryRow({
   editable: boolean
   overrides: TextOverrides
   onDeleteEntry: (id: EntryId) => void
+  onDeleteBullet: (entryId: EntryId, bulletId: BulletId) => void
 }) {
   const store = useEditorStore()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -179,7 +184,7 @@ function EntryRow({
       ) : (
         <VariantEntryFields entry={entry} overrides={overrides} />
       )}
-      <BulletList entry={entry} editable={editable} overrides={overrides} />
+      <BulletList entry={entry} editable={editable} overrides={overrides} onDeleteBullet={onDeleteBullet} />
     </li>
   )
 }
@@ -297,7 +302,17 @@ function VariantEntryFields({ entry, overrides }: { entry: Entry; overrides: Tex
 }
 
 /** The bullets of one entry, drag-sortable within their own nested context. */
-function BulletList({ entry, editable, overrides }: { entry: Entry; editable: boolean; overrides: TextOverrides }) {
+function BulletList({
+  entry,
+  editable,
+  overrides,
+  onDeleteBullet,
+}: {
+  entry: Entry
+  editable: boolean
+  overrides: TextOverrides
+  onDeleteBullet: (entryId: EntryId, bulletId: BulletId) => void
+}) {
   const store = useEditorStore()
   const workspace = store((state) => state.workspace)
   const composition = useEditorComposition()
@@ -334,6 +349,7 @@ function BulletList({ entry, editable, overrides }: { entry: Entry; editable: bo
               selected={selectedIds.includes(bullet.id)}
               editable={editable}
               overrides={overrides}
+              onDeleteBullet={onDeleteBullet}
             />
           ))}
         </ul>
@@ -358,12 +374,14 @@ function BulletRow({
   selected,
   editable,
   overrides,
+  onDeleteBullet,
 }: {
   bullet: Bullet
   entryId: EntryId
   selected: boolean
   editable: boolean
   overrides: TextOverrides
+  onDeleteBullet: (entryId: EntryId, bulletId: BulletId) => void
 }) {
   const store = useEditorStore()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -436,7 +454,7 @@ function BulletRow({
           type="button"
           className="bullet-row__delete"
           data-testid="delete-bullet"
-          onClick={() => store.getState().removeBullet(entryId, bullet.id)}
+          onClick={() => onDeleteBullet(entryId, bullet.id)}
         >
           删除
         </button>

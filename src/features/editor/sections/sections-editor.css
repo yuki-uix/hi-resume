@@ -261,6 +261,11 @@
   line-height: 1.5;
 }
 
+.dialog__text--impact {
+  margin-top: 10px;
+  color: #8a241a;
+}
+
 .dialog__layout {
   margin: 14px 0 0;
   padding: 0;

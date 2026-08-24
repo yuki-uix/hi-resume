@@ -1,9 +1,11 @@
 import { useState } from 'react'
 
 import type { ResumeComposition, Workspace } from '../../../domain/composition/types'
-import type { Basics, BasicsLink, EntryId, SectionId } from '../../../domain/pool/types'
+import type { Basics, BasicsLink, BulletId, EntryId, SectionId } from '../../../domain/pool/types'
 import { OverrideDot } from '../OverrideDot'
 import { useEditorStore } from '../editor-store-context'
+import { VariantImpactNotice } from '../removal/VariantImpactNotice'
+import { affectedVariantsByBullet, affectedVariantsByEntry } from '../removal/removal'
 import { useEditorComposition } from '../use-editor-composition'
 import { useTextOverrides } from '../use-text-overrides'
 import { EntryList } from './EntryList'
@@ -22,6 +24,7 @@ export function EntriesEditor() {
   const target = store((state) => state.target)
   const composition = useEditorComposition()
   const [deletingEntryId, setDeletingEntryId] = useState<EntryId | null>(null)
+  const [deletingBullet, setDeletingBullet] = useState<{ entryId: EntryId; bulletId: BulletId } | null>(null)
 
   const editingVariant = target.kind === 'variant'
 
@@ -42,12 +45,24 @@ export function EntriesEditor() {
           {section.layout === 'text' ? (
             <TextSectionBody sectionId={section.id} editingVariant={editingVariant} />
           ) : (
-            <EntryList sectionId={section.id} onDeleteEntry={setDeletingEntryId} />
+            <EntryList
+              sectionId={section.id}
+              onDeleteEntry={setDeletingEntryId}
+              onDeleteBullet={(entryId, bulletId) => setDeletingBullet({ entryId, bulletId })}
+            />
           )}
         </section>
       ))}
 
       {deletingEntryId && <DeleteEntryDialog entryId={deletingEntryId} onClose={() => setDeletingEntryId(null)} />}
+
+      {deletingBullet && (
+        <DeleteBulletDialog
+          entryId={deletingBullet.entryId}
+          bulletId={deletingBullet.bulletId}
+          onClose={() => setDeletingBullet(null)}
+        />
+      )}
     </aside>
   )
 }
@@ -196,7 +211,9 @@ function TextSectionBody({ sectionId, editingVariant }: { sectionId: SectionId; 
 
 function DeleteEntryDialog({ entryId, onClose }: { entryId: EntryId; onClose: () => void }) {
   const store = useEditorStore()
-  const title = store((state) => state.workspace.pool.entries[entryId]?.title ?? '')
+  const workspace = store((state) => state.workspace)
+  const title = workspace.pool.entries[entryId]?.title ?? ''
+  const affected = affectedVariantsByEntry(workspace, entryId)
 
   const confirm = () => {
     store.getState().removeEntry(entryId)
@@ -216,6 +233,7 @@ function DeleteEntryDialog({ entryId, onClose }: { entryId: EntryId; onClose: ()
         <p className="dialog__text" data-testid="delete-entry-title">
           确定删除条目「{title}」？该条目及其 bullet 将被移除，且无法撤销。
         </p>
+        <VariantImpactNotice names={affected} />
         <div className="dialog__actions">
           <button type="button" className="dialog__button" onClick={onClose} data-testid="delete-entry-cancel">
             取消
@@ -225,6 +243,54 @@ function DeleteEntryDialog({ entryId, onClose }: { entryId: EntryId; onClose: ()
             className="dialog__button dialog__button--danger"
             onClick={confirm}
             data-testid="delete-entry-confirm"
+          >
+            删除
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DeleteBulletDialog({
+  entryId,
+  bulletId,
+  onClose,
+}: {
+  entryId: EntryId
+  bulletId: BulletId
+  onClose: () => void
+}) {
+  const store = useEditorStore()
+  const workspace = store((state) => state.workspace)
+  const affected = affectedVariantsByBullet(workspace, bulletId)
+
+  const confirm = () => {
+    store.getState().removeBullet(entryId, bulletId)
+    onClose()
+  }
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <div
+        className="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="删除 bullet"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h3 className="dialog__title">删除 bullet</h3>
+        <p className="dialog__text">确定删除该 bullet？此操作无法撤销。</p>
+        <VariantImpactNotice names={affected} />
+        <div className="dialog__actions">
+          <button type="button" className="dialog__button" onClick={onClose} data-testid="delete-bullet-cancel">
+            取消
+          </button>
+          <button
+            type="button"
+            className="dialog__button dialog__button--danger"
+            onClick={confirm}
+            data-testid="delete-bullet-confirm"
           >
             删除
           </button>

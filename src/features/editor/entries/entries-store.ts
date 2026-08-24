@@ -4,6 +4,7 @@ import type {
   Workspace,
 } from '../../../domain/composition/types'
 import type { Basics, BulletId, Entry, EntryId, SectionId } from '../../../domain/pool/types'
+import { removalIds, removeFromVariants } from '../removal/removal'
 
 /**
  * Entry and bullet commands. Mirrors `sections-store.ts`: every operation is one
@@ -109,11 +110,14 @@ export function applyEntryCommand(workspace: Workspace, command: EntryCommand): 
       const bulletSelection = { ...master.bulletSelection }
       delete bulletSelection[command.id]
 
-      return {
+      const next = {
         ...workspace,
         pool: { ...workspace.pool, entries, bullets },
         master: { ...master, entrySelection, bulletSelection },
       }
+      // Variants that materialised a selection for this entry (or a text override
+      // for it or one of its bullets) now hold a dangling reference — clean them.
+      return removeFromVariants(next, removalIds.removeEntry(workspace, command))
     }
 
     case 'reorderEntries': {
@@ -185,7 +189,7 @@ export function applyEntryCommand(workspace: Workspace, command: EntryCommand): 
         (id) => id !== command.id,
       )
 
-      return {
+      const next = {
         ...workspace,
         pool: {
           ...workspace.pool,
@@ -194,6 +198,9 @@ export function applyEntryCommand(workspace: Workspace, command: EntryCommand): 
         },
         master: { ...master, bulletSelection },
       }
+      // Variants that materialised this bullet's selection or overrode its text
+      // now hold a dangling reference — clean them.
+      return removeFromVariants(next, removalIds.removeBullet(workspace, command))
     }
 
     case 'reorderBullets': {
