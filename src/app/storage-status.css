@@ -19,10 +19,6 @@
   line-height: 1.4;
 }
 
-.storage-status__actions {
-  margin: 2px 0;
-}
-
 .storage-status__export {
   padding: 3px 8px;
   font-size: 11px;
@@ -34,6 +30,58 @@
 
 .storage-status__export:hover {
   background: #eceef1;
+}
+
+.storage-status__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 2px 0;
+}
+
+.storage-status__bind {
+  padding: 3px 8px;
+  font-size: 11px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.storage-status__bind:hover:not(:disabled) {
+  background: #eceef1;
+}
+
+.storage-status__bind:disabled,
+.storage-status__regrant:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.storage-status__file {
+  word-break: break-all;
+}
+
+.storage-status__hint {
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* A binding that is not currently writable. Same red as a save failure: the
+ * user's edits are not reaching their file. */
+.storage-status__issue {
+  color: #b3241c;
+  line-height: 1.4;
+}
+
+.storage-status__regrant {
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .storage-status__saved {

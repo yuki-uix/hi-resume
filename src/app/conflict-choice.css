@@ -1,0 +1,99 @@
+/* The startup conflict prompt. Covers the viewport on purpose: until the user
+ * chooses, there is no agreed-upon workspace to show behind it. */
+
+.conflict {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.45);
+  z-index: 40;
+}
+
+.conflict__panel {
+  width: min(560px, 100%);
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px 22px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.conflict__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.conflict__body {
+  margin: 0 0 14px;
+  line-height: 1.6;
+  color: #374151;
+}
+
+.conflict__sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.conflict__side {
+  border: 1px solid #d8dbe0;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.conflict__side-label {
+  font-weight: 600;
+}
+
+.conflict__side-time {
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+  color: #111827;
+}
+
+.conflict__side-detail,
+.conflict__side-summary {
+  margin-top: 4px;
+  color: #6b7280;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.conflict__warn {
+  margin: 12px 0 0;
+  color: #8a241a;
+}
+
+.conflict__error {
+  margin: 8px 0 0;
+  color: #b3241c;
+}
+
+.conflict__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.conflict__button {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 5px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.conflict__button:hover:not(:disabled) {
+  background: #eceef1;
+}
+
+.conflict__button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

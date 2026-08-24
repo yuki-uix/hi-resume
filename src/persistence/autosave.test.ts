@@ -108,8 +108,67 @@ describe('createAutosaveController', () => {
     const onError = vi.fn()
     const controller = createAutosaveController({ getWorkspace: () => createEmptyWorkspace(), save, onError })
 
+    controller.notify() // there is an edit to write; flush only writes when there is
     await expect(controller.flush()).rejects.toThrow('disk full')
     expect(onError).toHaveBeenCalledWith(boom)
+  })
+
+  it('flush writes nothing when no edit is waiting', async () => {
+    // The unload handler flushes on every close. Writing there unconditionally
+    // costs a redundant IndexedDB write and — once a file is bound (#45) —
+    // rewrites the user's file with bytes it already has, which can overwrite a
+    // change another program made while this tab was idle.
+    const { save } = fakeSave()
+    const controller = createAutosaveController({ getWorkspace: () => createEmptyWorkspace(), save })
+
+    await controller.flush()
+
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  it('flush retries after a failed save, and stops once one succeeds', async () => {
+    const save = vi.fn<(workspace: Workspace) => Promise<void>>()
+    save.mockRejectedValueOnce(new Error('disk full')).mockResolvedValue(undefined)
+    const controller = createAutosaveController({ getWorkspace: () => createEmptyWorkspace(), save })
+
+    controller.notify()
+    await expect(controller.flush()).rejects.toThrow('disk full')
+
+    // Still unwritten, so the next flush must try again...
+    await controller.flush()
+    expect(save).toHaveBeenCalledTimes(2)
+
+    // ...and now that it landed, a further flush has nothing to do.
+    await controller.flush()
+    expect(save).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps an edit that arrives while a save is in flight', async () => {
+    // The edit is not covered by the save that was already running, so it must
+    // survive as pending work rather than being marked written.
+    const releases: Array<() => void> = []
+    const save = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releases.push(resolve)
+        }),
+    )
+    const controller = createAutosaveController({ getWorkspace: () => createEmptyWorkspace(), save })
+
+    controller.notify()
+    const inFlight = controller.flush()
+    controller.notify() // arrives mid-save
+    releases[0]?.()
+    await inFlight
+
+    // The mid-save edit is still pending, so this flush writes rather than
+    // deciding the in-flight save had already covered it.
+    const second = controller.flush()
+    releases[1]?.()
+    await second
+    expect(save).toHaveBeenCalledTimes(2)
+
+    controller.dispose()
   })
 
   it('ignores notify after dispose', async () => {
