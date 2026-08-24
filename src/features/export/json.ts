@@ -1,7 +1,6 @@
 import type { Workspace } from '../../domain/composition/types'
-import { parseWorkspace } from '../../domain/composition/schema'
-import { SchemaVersionMismatchError } from '../../persistence/errors'
-import { assertSchemaVersionSupported } from '../../persistence/schema-version'
+import { SchemaVersionMismatchError, WorkspaceReadError } from '../../persistence/errors'
+import { validateWorkspace } from '../../persistence/migration'
 
 /**
  * JSON is the portable backup format (docs/ARCHITECTURE.md §3「JSON 备份优先」).
@@ -60,10 +59,14 @@ export function summarizeWorkspace(workspace: Workspace): WorkspaceSummary {
  *
  * Three failures are distinguished, all before any state is touched:
  *  1. not valid JSON — one line with the parser's message;
- *  2. schema errors — `parseWorkspace`'s per-path messages;
- *  3. an unsupported `schemaVersion` — the same gate the IndexedDB load path
- *     uses (`assertSchemaVersionSupported`), so load and import can never
- *     disagree about which versions this build understands.
+ *  2. schema errors — the per-path Zod messages from the shared validation gate;
+ *  3. an unsupported `schemaVersion` — the same version gate the IndexedDB load
+ *     path uses, so load and import can never disagree about which versions this
+ *     build understands.
+ *
+ * Import deliberately *validates but does not migrate*: `validateWorkspace` is
+ * the validate-only half of the shared gate, so the export → import → export
+ * round trip stays byte-for-byte.
  */
 export function parseWorkspaceFile(text: string): WorkspaceFileParseResult {
   let data: unknown
@@ -74,11 +77,8 @@ export function parseWorkspaceFile(text: string): WorkspaceFileParseResult {
     return { ok: false, errors: [`不是合法的 JSON：${message}`] }
   }
 
-  const parsed = parseWorkspace(data)
-  if (!parsed.ok) return { ok: false, errors: parsed.errors }
-
   try {
-    assertSchemaVersionSupported(parsed.workspace.schemaVersion)
+    return { ok: true, workspace: validateWorkspace(data) }
   } catch (cause) {
     if (cause instanceof SchemaVersionMismatchError) {
       return {
@@ -88,10 +88,11 @@ export function parseWorkspaceFile(text: string): WorkspaceFileParseResult {
         ],
       }
     }
-    // Unreachable after `parseWorkspace`'s positive-integer check; kept total so
-    // the UI never has to catch a thrown version gate.
+    if (cause instanceof WorkspaceReadError) {
+      return { ok: false, errors: cause.message.split('; ') }
+    }
+    // Unreachable — every gate failure is one of the two types above; kept total
+    // so the UI never has to catch a thrown version gate.
     return { ok: false, errors: ['无法识别该备份的 schemaVersion。'] }
   }
-
-  return { ok: true, workspace: parsed.workspace }
 }

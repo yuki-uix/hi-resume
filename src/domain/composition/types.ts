@@ -90,6 +90,8 @@ export type WorkspaceSettings = {
   pageSize: PageSize
   /** Applications idle for longer than this get flagged on the board (M3). */
   staleAfterDays?: number
+  /** v2: whether the rendered resume shows page numbers. Filled by migration. */
+  pageNumbers?: boolean
 }
 
 export type Workspace = {

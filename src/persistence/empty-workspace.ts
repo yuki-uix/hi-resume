@@ -116,6 +116,6 @@ export function createEmptyWorkspace(): Workspace {
       bulletSelection: {},
     },
     variants: [],
-    settings: { pageSize: 'A4' },
+    settings: { pageSize: 'A4', pageNumbers: false },
   }
 }

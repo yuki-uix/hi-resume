@@ -16,7 +16,7 @@ import type { TextOverrides, Workspace } from './types'
  * problem into data loss.
  */
 
-export const CURRENT_SCHEMA_VERSION = 1
+export const CURRENT_SCHEMA_VERSION = 2
 
 /**
  * IDs are branded strings. Zod cannot produce a brand declared with a `unique
@@ -148,6 +148,9 @@ export const resumeVariantSchema = z.object({
 export const workspaceSettingsSchema = z.object({
   pageSize: z.enum(['A4', 'Letter']),
   staleAfterDays: z.number().int().positive().optional(),
+  // v2: added by the first schema bump. Optional in the type, but `migrateWorkspace`
+  // fills a default so a loaded workspace is always canonical v2.
+  pageNumbers: z.boolean().optional(),
 })
 
 /** The pool fields a referential-integrity check needs, typed loosely so the

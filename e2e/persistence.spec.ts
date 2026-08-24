@@ -148,6 +148,56 @@ test('AC3: a newer schemaVersion shows a clear error and does not overwrite data
   expect(record?.workspace.schemaVersion).toBe(999)
 })
 
+test('AC3b: a structurally corrupt record shows a readable error, not a white screen (#27)', async ({
+  page,
+  context,
+}) => {
+  await openEditor(page)
+
+  // Corrupt the stored row in place: `pool.entries` must be a record, not an array.
+  await page.evaluate(
+    async ({ name, table, key }) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const req = indexedDB.open(name)
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => reject(req.error)
+      })
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const tx = db.transaction(table, 'readwrite')
+          const store = tx.objectStore(table)
+          const getReq = store.get(key)
+          getReq.onsuccess = () => {
+            const record = getReq.result as { id: string; workspace: { pool: { entries: unknown } } }
+            record.workspace.pool.entries = []
+            store.put(record)
+          }
+          getReq.onerror = () => reject(getReq.error)
+          tx.oncomplete = () => resolve()
+          tx.onerror = () => reject(tx.error)
+        })
+      } finally {
+        db.close()
+      }
+    },
+    { name: WORKSPACE_DB_NAME, table: WORKSPACE_TABLE, key: WORKSPACE_KEY },
+  )
+
+  // Premise first: the corruption really landed in IndexedDB. If the write above
+  // had silently failed, `loadWorkspace` would see an empty DB and show the empty
+  // editor — a different outcome — so we must confirm the record is present and
+  // corrupt before asserting the load error.
+  const corruptRecord = await readRecord(page)
+  expect(corruptRecord?.id).toBe(WORKSPACE_KEY)
+  expect(Array.isArray((corruptRecord?.workspace.pool as { entries: unknown }).entries)).toBe(true)
+
+  // A fresh instance must refuse the corrupt row with a readable Zod-path error.
+  const reopened = await context.newPage()
+  await reopened.goto('/')
+  await expect(reopened.locator('[data-testid="storage-error"]')).toBeVisible()
+  await expect(reopened.locator('[data-testid="storage-error"]')).toContainText('pool.entries')
+})
+
 test('AC4: first launch creates an empty workspace with no fixture content', async ({ page }) => {
   await openEditor(page)
 
