@@ -38,11 +38,45 @@ body {
   pointer-events: none;
 }
 
+/* Truncation warning for a page whose block is taller than the page (#28).
+ *
+ * `position: absolute` is load-bearing, not cosmetic: pagination reads block
+ * heights out of the flow, so a notice that joined the flow would change what
+ * fits. Pinned inside the page's padding box, it also adds nothing to the page's
+ * scroll area, which is what the e2e page-height gate measures. */
+.page-overflow-notice {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-top: 2px solid #c0392b;
+  background: #fdece8;
+  color: #8a2b1d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.page-overflow-notice__title {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
 @media print {
   .preview {
     display: block;
     padding: 0;
     background: none;
+  }
+
+  /* An editing affordance, never resume content: the exported PDF must contain
+   * exactly what the resume says and nothing the editor drew on top of it. */
+  .page-overflow-notice {
+    display: none;
   }
 
   .resume-page {

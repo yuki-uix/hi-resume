@@ -3,8 +3,8 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import type { PageSize } from '../../domain/composition/types'
 import { awaitResumeFont } from './fonts'
 import { CSS_PAGE_SIZE, pageMetrics } from './page-metrics'
-import { paginateBlocks } from './paginate'
-import type { PageBlock } from './types'
+import { paginateBlocks, type PaginationResult } from './paginate'
+import type { PageBlock, PageOverflow } from './types'
 import './preview.css'
 
 type Props = {
@@ -35,7 +35,7 @@ type Props = {
  */
 export function PaginatedPreview({ blocks, pageSize, debugMeasurer = false }: Props) {
   const metrics = pageMetrics(pageSize)
-  const [pages, setPages] = useState<PageBlock[][] | null>(null)
+  const [result, setResult] = useState<PaginationResult | null>(null)
   const measurerRef = useRef<HTMLDivElement | null>(null)
 
   // Re-measure when the *input reference* changes. The previous fingerprint
@@ -70,7 +70,7 @@ export function PaginatedPreview({ blocks, pageSize, debugMeasurer = false }: Pr
         (child) => (child as HTMLElement).getBoundingClientRect().height,
       )
       measuredRef.current = { pageSize, blocks }
-      setPages(paginateBlocks(blocks, heights, metrics.contentHeightPx))
+      setResult(paginateBlocks(blocks, heights, metrics.contentHeightPx))
     })()
     return () => {
       cancelled = true
@@ -92,34 +92,65 @@ export function PaginatedPreview({ blocks, pageSize, debugMeasurer = false }: Pr
     </div>
   )
 
-  if (measuring || pages === null) {
+  if (measuring || result === null) {
     return measurer
   }
+
+  const overflowByPage = new Map(result.overflows.map((overflow) => [overflow.pageIndex, overflow]))
 
   return (
     <>
       <style>{`@page { size: ${CSS_PAGE_SIZE[pageSize]}; margin: 0; }`}</style>
       <div className="preview" data-paginated="true" data-page-size={pageSize}>
-        {pages.map((pageBlocks, index) => (
-          <section
-            key={index}
-            className="resume-page resume-typography"
-            data-page-index={index}
-            style={{
-              width: metrics.widthPx,
-              height: metrics.heightPx,
-              padding: metrics.marginPx,
-            }}
-          >
-            {pageBlocks.map((block) => (
-              <div key={block.key} style={{ margin: 0, padding: 0 }}>
-                {block.node}
-              </div>
-            ))}
-          </section>
-        ))}
+        {result.pages.map((pageBlocks, index) => {
+          const overflow = overflowByPage.get(index)
+          return (
+            <section
+              key={index}
+              className="resume-page resume-typography"
+              data-page-index={index}
+              style={{
+                width: metrics.widthPx,
+                height: metrics.heightPx,
+                padding: metrics.marginPx,
+              }}
+            >
+              {pageBlocks.map((block) => (
+                <div key={block.key} style={{ margin: 0, padding: 0 }}>
+                  {block.node}
+                </div>
+              ))}
+              {overflow ? <OverflowNotice overflow={overflow} /> : null}
+            </section>
+          )
+        })}
       </div>
       {debugMeasurer ? measurer : null}
     </>
+  )
+}
+
+/**
+ * Screen-only warning that this page's content is being cut off.
+ *
+ * Deliberately *not* a `PageBlock`: it is never produced by `buildBlocks`, never
+ * enters the off-screen measurer, and is `position: absolute` so it stays out of
+ * the block flow — it cannot change a measured height and therefore cannot move
+ * a page boundary. `@media print` hides it, so it is absent from the PDF.
+ *
+ * The wording has to leave the reader with the truth: the overflow has *not*
+ * been dealt with, the text below the cut is gone from the exported file, and
+ * the only fix available today is to shorten the entry.
+ */
+function OverflowNotice({ overflow }: { overflow: PageOverflow }) {
+  return (
+    <div className="page-overflow-notice" data-overflow-notice="" role="note">
+      <strong className="page-overflow-notice__title">这一页放不下，内容被裁掉了</strong>
+      <span className="page-overflow-notice__body">
+        「{overflow.blockLabel}」比一页还高，超出页面 {Math.round(overflow.overflowPx)}px。
+        超出的部分在这里被截断，导出的 PDF 里也没有这些内容。
+        请删减这个条目，或把它拆成两个条目。
+      </span>
+    </div>
   )
 }

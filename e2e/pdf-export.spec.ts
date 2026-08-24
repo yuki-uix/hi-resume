@@ -328,6 +328,41 @@ test('AC6: fonts are embedded, and no font is Type 3', async ({ page }, testInfo
 })
 
 // ---------------------------------------------------------------------------
+// AC 8 (#28) — clipped content is really gone from the PDF, and the on-screen
+// truncation notice is not in it.
+//
+// The screen shows a page container with `overflow: hidden`, so "the rest of
+// the entry is invisible" could in principle still be a rendering-only fact
+// with the text present in the export. `pdftotext` on the emitted bytes is the
+// external check that it is not: the bullets past the cut are absent.
+// ---------------------------------------------------------------------------
+
+test('AC8: bullets clipped on screen are absent from the PDF; the notice is too', async ({
+  page,
+}, testInfo) => {
+  await open(page, 'bullets-200')
+  // Precondition: all 200 bullets are in the DOM. The loss happens at the page
+  // boundary, not in the render model.
+  expect(await page.locator('[data-bullet-id]').count()).toBe(200)
+  await expect(page.locator('[data-overflow-notice]')).toBeVisible()
+
+  const text = await pdfText(await renderPdf(page, testInfo))
+  const extracted = text.match(/bullet \d+/g) ?? []
+
+  // Some bullets made it — otherwise "fewer than 200" would pass on an empty
+  // or unparseable PDF.
+  expect(extracted.length).toBeGreaterThan(0)
+  expect(extracted).toContain('bullet 1')
+  // ...and the tail did not. This is the #28 defect as an external fact.
+  expect(extracted.length).toBeLessThan(200)
+  expect(extracted).not.toContain('bullet 200')
+
+  // The notice is an editing affordance and must not print.
+  expect(text).not.toContain('这一页放不下')
+  expect(text).not.toContain('导出的 PDF 里也没有这些内容')
+})
+
+// ---------------------------------------------------------------------------
 // AC 7 — two independent parsers extract identical CJK code points, none of
 // which are Kangxi radicals. Exercises the rare-character fixture so a narrow
 // font subset (which falls back to a system font for the rare glyphs) cannot

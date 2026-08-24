@@ -194,6 +194,169 @@ test('anchors: data-* ids equal the fixture ids', async ({ page }) => {
   expect(await page.locator('[data-bullet-id="bul_atlas_1"]').count()).toBe(1)
 })
 
+// ---------------------------------------------------------------------------
+// 10 (#28) — no page may render content taller than its content area.
+// ---------------------------------------------------------------------------
+
+type PageFit = {
+  index: number
+  /** The page's padding box: page height, since the container has no border. */
+  clientHeight: number
+  scrollHeight: number
+  /** `clientHeight` minus the two page margins — what pagination budgets for. */
+  contentAreaPx: number
+  /** How far the block flow actually reaches below the content box top. */
+  contentUsedPx: number
+  /** Overflow measured against the padding box (hides the bottom margin). */
+  scrollOverflowPx: number
+  /** Overflow measured against the content area — the pagination budget. */
+  contentOverflowPx: number
+}
+
+/**
+ * Read every page's real content extent. `.resume-page` is `overflow: hidden`,
+ * so anything past the content area is invisible on screen *and* absent from
+ * the PDF: measuring is the only way to see it.
+ */
+async function pageFits(page: Page): Promise<PageFit[]> {
+  return page.locator('.resume-page').evaluateAll((els) =>
+    els.map((el, index) => {
+      const style = getComputedStyle(el)
+      const padTop = Number.parseFloat(style.paddingTop)
+      const padBottom = Number.parseFloat(style.paddingBottom)
+      const contentTop = el.getBoundingClientRect().top + padTop
+      const contentAreaPx = el.clientHeight - padTop - padBottom
+      // Only the measured block wrappers count. The overflow notice is an
+      // absolutely-positioned screen affordance, not part of the flow.
+      const blocks = Array.from(el.children).filter(
+        (child) => !(child as HTMLElement).hasAttribute('data-overflow-notice'),
+      )
+      const bottom = blocks.reduce(
+        (max, child) => Math.max(max, child.getBoundingClientRect().bottom),
+        contentTop,
+      )
+      return {
+        index,
+        clientHeight: el.clientHeight,
+        scrollHeight: el.scrollHeight,
+        contentAreaPx,
+        contentUsedPx: bottom - contentTop,
+        scrollOverflowPx: el.scrollHeight - el.clientHeight,
+        contentOverflowPx: bottom - contentTop - contentAreaPx,
+      }
+    }),
+  )
+}
+
+/** Sub-pixel slack: layout rounding, not truncation. */
+const FIT_TOLERANCE_PX = 0.5
+
+for (const fixture of ['a', 'b', 'c', 'd', 'e'] as const) {
+  test(`AC10: fixture ${fixture} — every page's content fits its content area`, async ({
+    page,
+  }) => {
+    await open(page, fixture)
+    const fits = await pageFits(page)
+    expect(fits.length).toBeGreaterThan(0)
+    for (const fit of fits) {
+      expect(fit.contentOverflowPx, `page ${fit.index} measured ${JSON.stringify(fit)}`).toBeLessThanOrEqual(
+        FIT_TOLERANCE_PX,
+      )
+    }
+    // Nothing overflowed, so nothing may be warned about — otherwise the notice
+    // assertions below would pass on a preview that cries wolf on every page.
+    expect(await page.locator('[data-overflow-notice]').count()).toBe(0)
+  })
+}
+
+// ---------------------------------------------------------------------------
+// 10b (#28) — the known-overflowing fixture. `bullets-200` is one entry with
+// 200 bullets: a single indivisible block taller than a whole page, which the
+// greedy pass gives its own page and which then overruns it. Splitting such a
+// block is a change to the pagination model and is out of scope for #28, so
+// this test does not assert that it fits — it pins the defect at its measured
+// size and asserts that it is no longer silent.
+//
+// If pagination ever learns to split blocks, this test fails. That is the
+// intent: the fixture would then belong in the AC10 list above.
+// ---------------------------------------------------------------------------
+
+test('AC10b: bullets-200 overflows its page, and the page says so', async ({ page }) => {
+  await open(page, 'bullets-200')
+  const fits = await pageFits(page)
+  const contentAreaPx = fits[0]?.contentAreaPx ?? 0
+  expect(contentAreaPx).toBeGreaterThan(0)
+
+  // Precondition first: the fixture must really produce a block taller than the
+  // content area. `getBoundingClientRect` reports the element's full box even
+  // where an ancestor clips it, so this is the block's true height. Without
+  // this assertion, everything below could be passing about a page that never
+  // overflowed at all.
+  const entryHeight = await page
+    .locator('.resume-page [data-entry-id="ent_perf"]')
+    .evaluate((el) => el.getBoundingClientRect().height)
+  expect(
+    entryHeight,
+    `entry block is ${entryHeight}px, page content area is ${contentAreaPx}px`,
+  ).toBeGreaterThan(contentAreaPx)
+
+  // The defect itself, measured: exactly one page overruns its content area.
+  const overflowing = fits.filter((fit) => fit.contentOverflowPx > FIT_TOLERANCE_PX)
+  expect(overflowing.map((fit) => fit.index)).toEqual([1])
+  const overflow = overflowing[0] as PageFit
+  // Both readings of "how much is lost" agree to within a rounding pixel:
+  // `scrollHeight - clientHeight` (the padding box) and content-used minus the
+  // content area. If these ever diverge, one of them is measuring the wrong box.
+  expect(Math.abs(overflow.contentOverflowPx - overflow.scrollOverflowPx)).toBeLessThan(1)
+  // Same order of magnitude as the block's own overhang — this is a whole entry
+  // of lost bullets, not a rounding artefact.
+  expect(overflow.contentOverflowPx).toBeGreaterThan(1000)
+
+  // And it is no longer silent: the affected page names the entry and says the
+  // excess is gone from the PDF.
+  const notice = page.locator('.resume-page[data-page-index="1"] [data-overflow-notice]')
+  await expect(notice).toBeVisible()
+  await expect(notice).toContainText('Performance')
+  await expect(notice).toContainText('导出的 PDF 里也没有这些内容')
+  // Only the page that overflows carries one.
+  expect(await page.locator('[data-overflow-notice]').count()).toBe(1)
+})
+
+// ---------------------------------------------------------------------------
+// 10c (#28) — the notice is an editing affordance, not resume content: it must
+// not reach the print view, and it must not move a page boundary.
+// ---------------------------------------------------------------------------
+
+test('AC10c: the overflow notice is screen-only and does not move page boundaries', async ({
+  page,
+}) => {
+  await open(page, 'bullets-200')
+  const notice = page.locator('[data-overflow-notice]')
+  await expect(notice).toBeVisible()
+
+  await page.emulateMedia({ media: 'print' })
+  await expect(notice).toBeHidden()
+  await page.emulateMedia({ media: 'screen' })
+
+  // It is not among the blocks: the off-screen measurer renders exactly what
+  // `buildBlocks` produced, so a notice there would be a measured height.
+  await page.goto('/?fixture=bullets-200&measurer=1')
+  await page.waitForSelector('[data-paginated="true"]')
+  await page.waitForSelector('.pagination-measurer', { state: 'attached' })
+  expect(await page.locator('.pagination-measurer [data-overflow-notice]').count()).toBe(0)
+
+  // And it is out of the page's flow: deleting it changes no page's measured
+  // geometry. If it were in the flow (or stretched the scroll area), the
+  // scrollHeight readings below would move when it goes away.
+  const before = await pageFits(page)
+  expect(before.some((fit) => fit.scrollOverflowPx > 0)).toBe(true)
+  await page.evaluate(() => {
+    document.querySelectorAll('[data-overflow-notice]').forEach((el) => el.remove())
+  })
+  expect(await page.locator('[data-overflow-notice]').count()).toBe(0)
+  expect(await pageFits(page)).toEqual(before)
+})
+
 test('anchors: text is real DOM, not canvas or image', async ({ page }) => {
   await open(page, 'b')
   expect(await page.locator('canvas').count()).toBe(0)
