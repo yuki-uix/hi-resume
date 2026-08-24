@@ -3,6 +3,8 @@ import { useState, type ReactNode } from 'react'
 import type { ResumeComposition, Workspace } from '../../../domain/composition/types'
 import type { SectionId, SectionLayout } from '../../../domain/pool/types'
 import { useEditorStore } from '../editor-store-context'
+import { VariantImpactNotice } from '../removal/VariantImpactNotice'
+import { affectedVariantsBySection } from '../removal/removal'
 import { useEditorComposition } from '../use-editor-composition'
 
 /**
@@ -158,7 +160,9 @@ export function AddSectionDialog({ onClose }: { onClose: () => void }) {
 export function DeleteSectionDialog({ sectionId, onClose }: { sectionId: SectionId; onClose: () => void }) {
   const store = useEditorStore()
   const composition = useEditorComposition()
-  const title = sectionTitle(store.getState().workspace, composition, sectionId)
+  const workspace = store((state) => state.workspace)
+  const title = sectionTitle(workspace, composition, sectionId)
+  const affected = affectedVariantsBySection(workspace, sectionId)
 
   const confirm = () => {
     store.getState().removeCustomSection(sectionId)
@@ -170,6 +174,7 @@ export function DeleteSectionDialog({ sectionId, onClose }: { sectionId: Section
       <p className="dialog__text">
         确定删除区块「{title}」？该区块及其内容将被移除，且无法撤销。
       </p>
+      <VariantImpactNotice names={affected} />
       <div className="dialog__actions">
         <button type="button" className="dialog__button" onClick={onClose} data-testid="delete-cancel">
           取消
