@@ -3,11 +3,10 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import type { Workspace } from '../../domain/composition/types'
 import { saveWorkspace } from '../../persistence/workspace-db'
 import { useEditorStore } from '../editor/editor-store-context'
+import { downloadWorkspaceFile } from './download'
 import {
   parseWorkspaceFile,
-  serializeWorkspace,
   summarizeWorkspace,
-  WORKSPACE_FILE_NAME,
   type WorkspaceSummary,
 } from './json'
 import './workspace-backup.css'
@@ -39,7 +38,7 @@ export function WorkspaceBackup() {
   const [done, setDone] = useState(false)
 
   const handleExport = () => {
-    downloadJson(store.getState().workspace)
+    downloadWorkspaceFile(store.getState().workspace)
   }
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -174,19 +173,4 @@ export function WorkspaceBackup() {
       )}
     </div>
   )
-}
-
-/** Build the file and trigger a browser download. DOM-only glue, hence not in the pure `json.ts`. */
-function downloadJson(workspace: Workspace): void {
-  const blob = new Blob([serializeWorkspace(workspace)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = WORKSPACE_FILE_NAME
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  // Defer the revoke until the download has actually started; revoking inside
-  // the click handler can race the browser reading the blob.
-  setTimeout(() => URL.revokeObjectURL(url), 0)
 }

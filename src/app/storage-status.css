@@ -1,0 +1,45 @@
+/* The always-visible storage status, docked near the top of the editor sidebar.
+ * Lives inside `.sections-sidebar`, so it inherits that column's typography and
+ * never sets font-family / font-size on a pagination-measurer ancestor (see the
+ * header comment in `sections-editor.css`). */
+
+.storage-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.storage-status__location {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.storage-status__risk {
+  color: #8a241a; /* the loss risk, deliberately not "safe"-looking */
+  line-height: 1.4;
+}
+
+.storage-status__actions {
+  margin: 2px 0;
+}
+
+.storage-status__export {
+  padding: 3px 8px;
+  font-size: 11px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.storage-status__export:hover {
+  background: #eceef1;
+}
+
+.storage-status__saved {
+  color: #6b7280;
+}
+
+.storage-status__saved--error {
+  color: #b3241c;
+}
