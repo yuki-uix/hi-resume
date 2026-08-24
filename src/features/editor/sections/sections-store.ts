@@ -1,4 +1,8 @@
-import type { Workspace } from '../../../domain/composition/types'
+import type {
+  ResumeComposition,
+  VariantId,
+  Workspace,
+} from '../../../domain/composition/types'
 import type { BulletId, Section, SectionId, SectionLayout } from '../../../domain/pool/types'
 
 /**
@@ -12,13 +16,27 @@ import type { BulletId, Section, SectionId, SectionLayout } from '../../../domai
  * The reducer is a pure function so the invariants are testable without a
  * browser or a store instance.
  */
-export type SectionCommand =
+/**
+ * The section commands a variant accepts. Section shape — order, visibility,
+ * title — is composition state a variant may override, so these four are legal
+ * on every target.
+ */
+export type BothSectionCommand =
   | { type: 'reorderSections'; order: SectionId[] }
   | { type: 'moveSection'; id: SectionId; direction: 'up' | 'down' }
   | { type: 'setSectionVisible'; id: SectionId; visible: boolean }
   | { type: 'renameSection'; id: SectionId; title: string }
+
+/**
+ * The section commands only the master accepts. Adding or removing a section is
+ * a pool-level operation (the section and its entries live in the shared pool),
+ * so no variant may do it.
+ */
+export type MasterOnlySectionCommand =
   | { type: 'addCustomSection'; id: SectionId; title: string; layout: SectionLayout }
   | { type: 'removeCustomSection'; id: SectionId }
+
+export type SectionCommand = BothSectionCommand | MasterOnlySectionCommand
 
 export function applySectionCommand(workspace: Workspace, command: SectionCommand): Workspace {
   const master = workspace.master
@@ -151,5 +169,111 @@ export function applySectionCommand(workspace: Workspace, command: SectionComman
         },
       }
     }
+  }
+}
+
+/**
+ * The variant write path for section commands. Copy-on-write is per-field and
+ * follows the inheritance granularity (`docs/ARCHITECTURE.md` §3):
+ *
+ * - `sectionOrder` / `visibleSections` are whole-value: the *resolved* array is
+ *   materialised into the variant's partial, then modified. A section added to
+ *   the master afterwards must not silently reappear in a variant that reordered
+ *   itself.
+ * - `sectionTitles` is per-`SectionId`: only the renamed key is written, the
+ *   other sections keep inheriting.
+ *
+ * The reducer never writes the whole resolved composition back — that would turn
+ * the partial into a frozen copy of the master and kill inheritance.
+ *
+ * `updatedAt` is minted by the store action (like `renameVariant`), so this
+ * reducer stays pure.
+ */
+export function applyVariantSectionCommand(
+  workspace: Workspace,
+  variantId: VariantId,
+  command: BothSectionCommand,
+  updatedAt: string,
+): Workspace {
+  const variant = workspace.variants.find((v) => v.id === variantId)
+  if (!variant) return workspace
+
+  const composition = variant.composition
+  const master = workspace.master
+  let nextComposition: Partial<ResumeComposition>
+
+  switch (command.type) {
+    case 'reorderSections': {
+      nextComposition = { ...composition, sectionOrder: [...command.order] }
+      break
+    }
+
+    case 'moveSection': {
+      // Identical to the master's move, but the order and visibility it reads
+      // are the variant's *resolved* values, and only `sectionOrder` is written.
+      const sectionOrder = composition.sectionOrder ?? master.sectionOrder
+      const visible = new Set<SectionId>(composition.visibleSections ?? master.visibleSections)
+      const visibleOrder = sectionOrder.filter((id) => visible.has(id))
+      const index = visibleOrder.indexOf(command.id)
+      if (index === -1) return workspace
+
+      const targetIndex = command.direction === 'up' ? index - 1 : index + 1
+      if (targetIndex < 0 || targetIndex >= visibleOrder.length) return workspace
+      const anchor = visibleOrder[targetIndex]
+      if (!anchor) return workspace
+
+      const without = sectionOrder.filter((id) => id !== command.id)
+      const anchorIndex = without.indexOf(anchor)
+      const insertAt = command.direction === 'up' ? anchorIndex : anchorIndex + 1
+      const next = [...without]
+      next.splice(insertAt, 0, command.id)
+
+      nextComposition = { ...composition, sectionOrder: next }
+      break
+    }
+
+    case 'setSectionVisible': {
+      const base = composition.visibleSections ?? master.visibleSections
+      const alreadyVisible = base.includes(command.id)
+      if (alreadyVisible === command.visible) return workspace
+
+      const visibleSections = command.visible
+        ? [...base, command.id]
+        : base.filter((id) => id !== command.id)
+
+      nextComposition = { ...composition, visibleSections }
+      break
+    }
+
+    case 'renameSection': {
+      // Per-`SectionId`: only the renamed key is written. The "base" a rename
+      // can fall back to is the master's title (which may itself rename the
+      // section) or the pool default — renaming to that base drops the variant's
+      // override so it inherits again, exactly like the master drops its own
+      // override on renaming back to the pool default.
+      const base = master.sectionTitles[command.id] ?? workspace.pool.sections[command.id]?.title
+      const titles = { ...composition.sectionTitles }
+      if (base !== undefined && command.title === base) {
+        delete titles[command.id]
+      } else {
+        titles[command.id] = command.title
+      }
+
+      const next = { ...composition }
+      if (Object.keys(titles).length > 0) {
+        next.sectionTitles = titles
+      } else {
+        delete next.sectionTitles
+      }
+      nextComposition = next
+      break
+    }
+  }
+
+  return {
+    ...workspace,
+    variants: workspace.variants.map((v) =>
+      v.id === variantId ? { ...v, composition: nextComposition, updatedAt } : v,
+    ),
   }
 }

@@ -16,11 +16,17 @@ import type { CSSProperties } from 'react'
 
 import type { Section, SectionId } from '../../../domain/pool/types'
 import { useEditorStore } from '../editor-store-context'
+import { useEditorComposition } from '../use-editor-composition'
 
 /**
- * The left-column list. Its order is `ResumeComposition.sectionOrder`, mapped
- * through the pool — never a separate array kept in state. Hidden sections stay
- * in the list (greyed out) so the toggle can bring them back.
+ * The left-column list. Its order is the *resolved* `sectionOrder` of the current
+ * target — the master's own order, or a variant's inherited/overridden one —
+ * mapped through the pool. Never a separate array kept in state. Hidden sections
+ * stay in the list (greyed out) so the toggle can bring them back.
+ *
+ * Adding or deleting a section is a pool-level operation, so those controls are
+ * only rendered on the master; reordering, hiding and renaming are legal on a
+ * variant too and route through the store's target-aware reducer.
  */
 export function SectionList({
   onRename,
@@ -31,8 +37,9 @@ export function SectionList({
 }) {
   const store = useEditorStore()
   const workspace = store((state) => state.workspace)
+  const composition = useEditorComposition()
 
-  const sections = workspace.master.sectionOrder
+  const sections = composition.sectionOrder
     .map((id) => workspace.pool.sections[id])
     .filter((section): section is Section => section !== undefined)
 
@@ -44,11 +51,11 @@ export function SectionList({
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const from = workspace.master.sectionOrder.indexOf(active.id as SectionId)
-    const to = workspace.master.sectionOrder.indexOf(over.id as SectionId)
+    const from = composition.sectionOrder.indexOf(active.id as SectionId)
+    const to = composition.sectionOrder.indexOf(over.id as SectionId)
     if (from === -1 || to === -1) return
 
-    store.getState().reorderSections(arrayMove(workspace.master.sectionOrder, from, to))
+    store.getState().reorderSections(arrayMove(composition.sectionOrder, from, to))
   }
 
   return (
@@ -74,9 +81,12 @@ function SectionRow({
   onDelete: (id: SectionId) => void
 }) {
   const store = useEditorStore()
-  const workspace = store((state) => state.workspace)
-  const visible = workspace.master.visibleSections.includes(section.id)
-  const title = workspace.master.sectionTitles[section.id] ?? section.title
+  const target = store((state) => state.target)
+  const composition = useEditorComposition()
+  const isVariant = target.kind === 'variant'
+
+  const visible = composition.visibleSections.includes(section.id)
+  const title = composition.sectionTitles[section.id] ?? section.title
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: section.id,
@@ -134,7 +144,7 @@ function SectionRow({
         <span className="section-row__toggle-label">{visible ? '显示' : '隐藏'}</span>
       </label>
 
-      {section.removable && (
+      {!isVariant && section.removable && (
         <button
           type="button"
           className="section-row__delete"

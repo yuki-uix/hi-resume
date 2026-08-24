@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { selectRenderModel } from '../../../domain/composition/select-render-model'
 import type { PageSize, RenderTarget } from '../../../domain/composition/types'
@@ -40,8 +40,8 @@ export function SectionsEditor({
   backupControls?: ReactNode
 }) {
   const workspace = store((state) => state.workspace)
+  const target = store((state) => state.target)
 
-  const [target, setTarget] = useState<RenderTarget>({ kind: 'master' })
   const [renamingId, setRenamingId] = useState<SectionId | null>(null)
   const [deletingId, setDeletingId] = useState<SectionId | null>(null)
   const [adding, setAdding] = useState(false)
@@ -49,12 +49,16 @@ export function SectionsEditor({
   // The target is never allowed to go stale. Deleting the current variant resets
   // it synchronously in `VariantSwitcher`, but a JSON import can also replace the
   // workspace out from under a selected variant — this effect is the single gate
-  // that walks every exit back to the master.
-  useEffect(() => {
+  // that walks every exit back to the master. `useLayoutEffect` (not `useEffect`)
+  // runs before paint, so no frame can show a variant's identity chrome over the
+  // master's content (#30 AC9).
+  useLayoutEffect(() => {
     if (target.kind === 'variant' && !workspace.variants.some((variant) => variant.id === target.id)) {
-      setTarget({ kind: 'master' })
+      store.getState().setTarget({ kind: 'master' })
     }
-  }, [target, workspace.variants])
+  }, [target, workspace.variants, store])
+
+  const setTarget = (next: RenderTarget) => store.getState().setTarget(next)
 
   // The memo dependency must cover everything `selectRenderModel` reads for the
   // *current* target. For the master that is `pool` + `master`; for a variant it
@@ -75,9 +79,11 @@ export function SectionsEditor({
           <VariantSwitcher target={target} onSelectTarget={setTarget} />
           <div className="sections-sidebar__header">
             <h2 className="sections-sidebar__title">区块</h2>
-            <button type="button" className="sections-sidebar__add" data-testid="add-section" onClick={() => setAdding(true)}>
-              新建区块
-            </button>
+            {!editingVariant && (
+              <button type="button" className="sections-sidebar__add" data-testid="add-section" onClick={() => setAdding(true)}>
+                新建区块
+              </button>
+            )}
           </div>
           {statusLine && <div className="sections-sidebar__status">{statusLine}</div>}
           <SectionList onRename={setRenamingId} onDelete={setDeletingId} />

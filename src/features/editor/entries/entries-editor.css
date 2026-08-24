@@ -221,6 +221,56 @@
   margin-left: 22px;
 }
 
+/* ---- include checkboxes (entry / bullet selection) ---- */
+
+.entry-row__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #555;
+  cursor: pointer;
+}
+
+.entry-row__toggle-label {
+  user-select: none;
+}
+
+.bullet-row__toggle {
+  flex-shrink: 0;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+/* ---- read-only rows on a variant ---- */
+
+.entry-row__readonly-title {
+  flex: 1;
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bullet-row__readonly-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.entries-textarea--readonly {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  border: none;
+  background: #f3f4f6;
+}
+
 /* ---- print: the form never reaches the PDF ---- */
 
 @media print {

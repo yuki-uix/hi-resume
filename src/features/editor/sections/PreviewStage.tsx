@@ -5,6 +5,7 @@ import type { SectionId } from '../../../domain/pool/types'
 import { PaginatedPreview } from '../../preview/PaginatedPreview'
 import type { PageBlock } from '../../preview/types'
 import { useEditorStore } from '../editor-store-context'
+import { useEditorComposition } from '../use-editor-composition'
 
 /**
  * Wraps the paginated preview and floats the section toolbar above it.
@@ -28,14 +29,16 @@ export function PreviewStage({
 }) {
   const store = useEditorStore()
   const workspace = store((state) => state.workspace)
+  const target = store((state) => state.target)
+  const composition = useEditorComposition()
 
   const stageRef = useRef<HTMLDivElement | null>(null)
   const hoveredRef = useRef<SectionId | null>(null)
   const [hovered, setHovered] = useState<SectionId | null>(null)
   const [position, setPosition] = useState<{ top: number; right: number } | null>(null)
 
-  const visible = new Set<SectionId>(workspace.master.visibleSections)
-  const visibleOrder = workspace.master.sectionOrder.filter((id) => visible.has(id))
+  const visible = new Set<SectionId>(composition.visibleSections)
+  const visibleOrder = composition.sectionOrder.filter((id) => visible.has(id))
 
   const reposition = () => {
     const id = hoveredRef.current
@@ -57,12 +60,13 @@ export function PreviewStage({
     })
   }
 
-  // Re-pin the toolbar after a reorder/visibility change replaces the pages DOM.
+  // Re-pin the toolbar after a reorder/visibility change replaces the pages DOM,
+  // or a target switch changes the resolved section order.
   useEffect(() => {
     reposition()
     // `reposition` reads the hovered id from a ref and the stage from another
     // ref, so it does not need to be a dependency here.
-  }, [workspace, hovered])
+  }, [workspace, target, hovered])
 
   // Re-pin on scroll/resize instead of clearing. Clearing here races with a
   // programmatic scroll-into-view followed by a mouse move (e.g. Playwright's
