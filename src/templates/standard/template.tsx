@@ -87,15 +87,30 @@ function formatPeriod(period: { start: string; end?: string }): string {
 /** The generic renderer: entries sections become a list, text sections prose. */
 function renderGenericSection(section: RenderSection): PageBlock[] {
   const blocks: PageBlock[] = [
-    { key: `section:${section.id}`, kind: 'section-header', node: <SectionTitle section={section} /> },
+    {
+      key: `section:${section.id}`,
+      kind: 'section-header',
+      node: <SectionTitle section={section} />,
+      label: section.title,
+    },
   ]
 
   if (section.layout === 'entries') {
     for (const entry of section.entries) {
-      blocks.push({ key: `entry:${entry.id}`, kind: 'content', node: <EntryView entry={entry} /> })
+      blocks.push({
+        key: `entry:${entry.id}`,
+        kind: 'content',
+        node: <EntryView entry={entry} />,
+        label: entry.title,
+      })
     }
   } else if (section.text !== undefined) {
-    blocks.push({ key: `text:${section.id}`, kind: 'content', node: <SectionText section={section} /> })
+    blocks.push({
+      key: `text:${section.id}`,
+      kind: 'content',
+      node: <SectionText section={section} />,
+      label: section.title,
+    })
   }
 
   return blocks
@@ -116,7 +131,12 @@ function rendererFor(kind: SectionKind): SectionRenderer {
 /** Flatten a render model into the ordered pagination blocks a template emits. */
 export function buildBlocks(model: RenderModel): PageBlock[] {
   const blocks: PageBlock[] = [
-    { key: 'basics', kind: 'content', node: <Basics basics={model.basics} /> },
+    {
+      key: 'basics',
+      kind: 'content',
+      node: <Basics basics={model.basics} />,
+      label: model.basics.name,
+    },
   ]
 
   for (const section of model.sections) {
