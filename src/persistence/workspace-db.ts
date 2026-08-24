@@ -11,16 +11,17 @@ import {
   WORKSPACE_TABLE,
 } from './constants'
 import { WorkspaceReadError, WorkspaceWriteError } from './errors'
-import { assertSchemaVersionSupported } from './schema-version'
+import { parseAndMigrate } from './migration'
 
 /**
- * The one row the app reads and writes. The `workspace` value is the whole
- * `Workspace` object exactly as `parseWorkspace` / `createEmptyWorkspace`
- * produce it, so the IndexedDB record and the JSON backup share one shape.
+ * The one row the app reads and writes. `workspace` is typed `unknown` because it
+ * is read straight from IndexedDB — untrusted, possibly written by an older build
+ * or damaged — and is only promoted to a `Workspace` once `parseAndMigrate` has
+ * validated (and migrated) it.
  */
 type WorkspaceRecord = {
   id: string
-  workspace: Workspace
+  workspace: unknown
 }
 
 /**
@@ -79,8 +80,9 @@ export async function loadWorkspace(): Promise<Workspace | null> {
 
   if (record === undefined) return null
 
-  assertSchemaVersionSupported(record.workspace?.schemaVersion)
-  return record.workspace
+  // Validate and migrate (v1 → v2) through the same gate the JSON import and
+  // bound-file paths use, so a corrupt or outdated row is never returned raw.
+  return parseAndMigrate(record.workspace)
 }
 
 /**
