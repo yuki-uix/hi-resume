@@ -76,6 +76,40 @@ describe('parseWorkspaceFile', () => {
     expect(variant?.application.events[0]?.at).toBe('2026-08-01T09:00:00.000Z')
   })
 
+  it('round-trips two timestamped variants without regenerating either (AC6 / #18)', () => {
+    const raw = rawWorkspace()
+    raw.variants = [
+      {
+        id: 'var_one',
+        name: 'First',
+        composition: {},
+        textOverrides: {},
+        application: { status: 'draft', events: [] },
+        createdAt: '2026-08-01T08:00:00.000Z',
+        updatedAt: '2026-08-01T09:00:00.000Z',
+      },
+      {
+        id: 'var_two',
+        name: 'Second',
+        composition: { sectionOrder: ['sec_summary', 'sec_work'] },
+        textOverrides: { ent_acme: 'Staff Engineer' },
+        application: { status: 'applied', events: [] },
+        createdAt: '2026-08-02T08:00:00.000Z',
+        updatedAt: '2026-08-02T09:00:00.000Z',
+      },
+    ]
+
+    const exported = serializeWorkspace(raw)
+    const result = parseWorkspaceFile(exported)
+    if (!result.ok) throw new Error('expected the two-variant workspace to parse')
+
+    // Export → import → export is deep-equal, so neither timestamp was replaced
+    // on the way in.
+    expect(JSON.parse(serializeWorkspace(result.workspace))).toStrictEqual(JSON.parse(exported))
+    expect(result.workspace.variants[0]?.createdAt).toBe('2026-08-01T08:00:00.000Z')
+    expect(result.workspace.variants[1]?.updatedAt).toBe('2026-08-02T09:00:00.000Z')
+  })
+
   it('rejects text that is not JSON, with a readable message', () => {
     expect(expectErrors('{ this is not json').join('\n')).toContain('不是合法的 JSON')
   })

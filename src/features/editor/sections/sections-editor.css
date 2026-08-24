@@ -15,6 +15,17 @@
   background: #eef0f3;
 }
 
+/* Identity hint for variant mode: a non-text amber strip down the editor's left
+ * edge, so the user can tell at a glance they are viewing a variant (whose
+ * content is inherited from the master) rather than editing the master itself. */
+.sections-editor--variant {
+  box-shadow: inset 4px 0 0 #d97706;
+}
+
+.sections-editor--variant .entries-editor {
+  background: #fff7ed;
+}
+
 /* ---- left column ---- */
 
 .sections-sidebar {
