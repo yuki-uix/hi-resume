@@ -77,6 +77,13 @@ export type ResumeVariant = {
   updatedAt: string
 }
 
+/**
+ * Which resume the editor is currently rendering. Read-side only: the master
+ * resume, or one job variant addressed by id. Variant switching and the variant
+ * write path are later issues; this type just lets the read side name a target.
+ */
+export type RenderTarget = { kind: 'master' } | { kind: 'variant'; id: VariantId }
+
 export type PageSize = 'A4' | 'Letter'
 
 export type WorkspaceSettings = {

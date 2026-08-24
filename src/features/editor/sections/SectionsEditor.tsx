@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
-import { buildRenderModel } from '../../../domain/composition/render-model'
-import type { PageSize } from '../../../domain/composition/types'
+import { selectRenderModel } from '../../../domain/composition/select-render-model'
+import type { PageSize, RenderTarget } from '../../../domain/composition/types'
 import type { SectionId } from '../../../domain/pool/types'
 import { buildBlocks } from '../../../templates/standard'
 import { PrintButton } from '../../export/PrintButton'
@@ -12,6 +12,10 @@ import { PreviewStage } from './PreviewStage'
 import { AddSectionDialog, DeleteSectionDialog, RenameDialog } from './SectionDialogs'
 import { SectionList } from './SectionList'
 import './sections-editor.css'
+
+// Fixed to the master resume until variant switching lands: this issue wires the
+// read side only, so the editor always renders `{ kind: 'master' }`.
+const masterTarget: RenderTarget = { kind: 'master' }
 
 /**
  * The editor page: left column (section list) + middle column (entries form) +
@@ -44,7 +48,15 @@ export function SectionsEditor({
   const [deletingId, setDeletingId] = useState<SectionId | null>(null)
   const [adding, setAdding] = useState(false)
 
-  const blocks = useMemo(() => buildBlocks(buildRenderModel(workspace.pool, workspace.master)), [workspace])
+  // Narrow the memo to the two references `selectRenderModel` actually reads for
+  // a master target: the pool (content) and the master composition (shape). The
+  // old `[workspace]` dependency rebuilt the whole render model and re-measured
+  // every page on any workspace change — including, later, a variant's
+  // application notes, which touch neither the pool nor the master.
+  const blocks = useMemo(
+    () => buildBlocks(selectRenderModel(workspace, masterTarget)),
+    [workspace.pool, workspace.master],
+  )
 
   return (
     <EditorStoreContext.Provider value={store}>
