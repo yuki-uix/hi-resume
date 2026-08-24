@@ -5,6 +5,11 @@ import { newBulletId, newEntryId, newSectionId, newVariantId } from '../../domai
 import type { Basics, BulletId, EntryId, SectionId, SectionLayout } from '../../domain/pool/types'
 import { applyEntryCommand, applyVariantEntryCommand, type BothEntryCommand } from './entries/entries-store'
 import { applySectionCommand, applyVariantSectionCommand, type BothSectionCommand } from './sections/sections-store'
+import {
+  applyVariantTextOverrideCommand,
+  type TextOverrideId,
+  type VariantTextOverrideCommand,
+} from './text-overrides/text-overrides-store'
 import { applyVariantCommand } from './variants/variants-store'
 
 /**
@@ -61,6 +66,11 @@ export type EditorState = {
   setBasics: (basics: Basics) => void
   setSectionText: (sectionId: SectionId, text: string) => void
 
+  // text overrides (variant-only): reword a title / bullet / text body without
+  // touching the shared pool. No master counterpart — the master edits the pool.
+  setTextOverride: (id: TextOverrideId, text: string) => void
+  clearTextOverride: (id: TextOverrideId) => void
+
   // variants
   createVariant: (name: string) => VariantId
   duplicateVariant: (sourceId: VariantId, name: string) => VariantId
@@ -88,6 +98,14 @@ export function createEditorStore(initial: Workspace) {
       state.target.kind === 'variant'
         ? applyVariantEntryCommand(state.workspace, state.target.id, command, new Date().toISOString())
         : applyEntryCommand(state.workspace, command)
+
+    // Text overrides have no master reducer: on the master the fields edit the
+    // pool through `setBulletText` / `setEntryTitle` / `setSectionText`. So the
+    // write is variant-only, and a call while editing the master is a no-op.
+    const textOverrideWrite = (state: EditorState, command: VariantTextOverrideCommand): Workspace =>
+      state.target.kind === 'variant'
+        ? applyVariantTextOverrideCommand(state.workspace, state.target.id, command, new Date().toISOString())
+        : state.workspace
 
     return {
       workspace: initial,
@@ -153,6 +171,11 @@ export function createEditorStore(initial: Workspace) {
         set((state) => ({ workspace: applyEntryCommand(state.workspace, { type: 'setBasics', basics }) })),
       setSectionText: (sectionId, text) =>
         set((state) => ({ workspace: applyEntryCommand(state.workspace, { type: 'setSectionText', sectionId, text }) })),
+
+      setTextOverride: (id, text) =>
+        set((state) => ({ workspace: textOverrideWrite(state, { type: 'setTextOverride', id, text }) })),
+      clearTextOverride: (id) =>
+        set((state) => ({ workspace: textOverrideWrite(state, { type: 'clearTextOverride', id }) })),
 
       createVariant: (name) => {
         const id = newVariantId()

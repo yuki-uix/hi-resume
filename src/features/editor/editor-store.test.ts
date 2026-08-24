@@ -12,6 +12,7 @@ describe('createEditorStore', () => {
       'addBullet',
       'addCustomSection',
       'addEntry',
+      'clearTextOverride',
       'createVariant',
       'deleteVariant',
       'duplicateVariant',
@@ -35,6 +36,7 @@ describe('createEditorStore', () => {
       'setSectionText',
       'setSectionVisible',
       'setTarget',
+      'setTextOverride',
       'target',
       'workspace',
     ])

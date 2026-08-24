@@ -2,8 +2,10 @@ import { useState } from 'react'
 
 import type { ResumeComposition, Workspace } from '../../../domain/composition/types'
 import type { Basics, BasicsLink, EntryId, SectionId } from '../../../domain/pool/types'
+import { OverrideDot } from '../OverrideDot'
 import { useEditorStore } from '../editor-store-context'
 import { useEditorComposition } from '../use-editor-composition'
+import { useTextOverrides } from '../use-text-overrides'
 import { EntryList } from './EntryList'
 import './entries-editor.css'
 
@@ -38,7 +40,7 @@ export function EntriesEditor() {
         <section key={section.id} className="entries-section" data-section-edit-id={section.id}>
           <h3 className="entries-section__title">{displayTitle(workspace, composition, section.id)}</h3>
           {section.layout === 'text' ? (
-            <TextSectionBody sectionId={section.id} readOnly={editingVariant} />
+            <TextSectionBody sectionId={section.id} editingVariant={editingVariant} />
           ) : (
             <EntryList sectionId={section.id} onDeleteEntry={setDeletingEntryId} />
           )}
@@ -152,24 +154,43 @@ function BasicsCard() {
   )
 }
 
-/** A text-layout section's body prose (个人简介 etc.). Master-editable; read-only on a variant. */
-function TextSectionBody({ sectionId, readOnly }: { sectionId: SectionId; readOnly: boolean }) {
+/**
+ * A text-layout section's body prose (个人简介 etc.). On the master it edits
+ * `Section.text` in the pool; on a variant it edits `textOverrides[sectionId]`
+ * instead, so the shared summary stays intact and only this variant differs.
+ * The inheritance dot lights up when the variant has its own body text.
+ */
+function TextSectionBody({ sectionId, editingVariant }: { sectionId: SectionId; editingVariant: boolean }) {
   const store = useEditorStore()
-  const text = store((state) => state.workspace.pool.sections[sectionId]?.text ?? '')
+  const workspace = store((state) => state.workspace)
+  const overrides = useTextOverrides()
 
-  if (readOnly) {
-    return <p className="entries-textarea entries-textarea--readonly">{text}</p>
-  }
+  // For the master `overrides` is `{}`, so `??` always falls back to the pool.
+  const text = overrides[sectionId] ?? (workspace.pool.sections[sectionId]?.text ?? '')
+  const overridden = editingVariant && overrides[sectionId] !== undefined
 
   return (
-    <textarea
-      className="entries-textarea"
-      data-testid="section-text"
-      rows={5}
-      value={text}
-      placeholder="输入正文"
-      onChange={(event) => store.getState().setSectionText(sectionId, event.target.value)}
-    />
+    <div className="entries-textarea-row">
+      {editingVariant && (
+        <OverrideDot
+          overridden={overridden}
+          onRestore={() => store.getState().clearTextOverride(sectionId)}
+          restoreLabel="恢复正文继承"
+        />
+      )}
+      <textarea
+        className="entries-textarea"
+        data-testid="section-text"
+        rows={5}
+        value={text}
+        placeholder="输入正文"
+        onChange={(event) =>
+          editingVariant
+            ? store.getState().setTextOverride(sectionId, event.target.value)
+            : store.getState().setSectionText(sectionId, event.target.value)
+        }
+      />
+    </div>
   )
 }
 

@@ -242,33 +242,55 @@
   cursor: pointer;
 }
 
-/* ---- read-only rows on a variant ---- */
+/* ---- text-override inheritance indicator on a variant ---- */
 
-.entry-row__readonly-title {
-  flex: 1;
-  margin-left: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.override-dot {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 4px;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  vertical-align: middle;
 }
 
-.bullet-row__readonly-text {
+.override-dot--inherited {
+  background: #c6cad1;
+  cursor: default;
+}
+
+.override-dot--overridden {
+  background: #2f6fed;
+  cursor: pointer;
+}
+
+.override-dot--overridden:hover {
+  background: #1f5ad6;
+}
+
+.entries-field__hint {
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #9a9ea6;
+}
+
+.entries-field--readonly .entries-field__input {
+  color: #8a8f98;
+  background: #f3f4f6;
+}
+
+.entries-textarea-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.entries-textarea-row .entries-textarea {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.entries-textarea--readonly {
-  margin: 0;
-  padding: 8px 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  border: none;
-  background: #f3f4f6;
 }
 
 /* ---- print: the form never reaches the PDF ---- */
