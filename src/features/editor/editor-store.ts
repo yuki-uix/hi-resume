@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 
-import type { Workspace } from '../../domain/composition/types'
-import { newBulletId, newEntryId, newSectionId } from '../../domain/pool/ids'
+import type { VariantId, Workspace } from '../../domain/composition/types'
+import { newBulletId, newEntryId, newSectionId, newVariantId } from '../../domain/pool/ids'
 import type { Basics, BulletId, EntryId, SectionId, SectionLayout } from '../../domain/pool/types'
 import { applyEntryCommand } from './entries/entries-store'
 import { applySectionCommand } from './sections/sections-store'
+import { applyVariantCommand } from './variants/variants-store'
 
 /**
  * The single editor store: one workspace plus every section and entry action.
@@ -45,6 +46,12 @@ export type EditorState = {
   // basics & text-section body
   setBasics: (basics: Basics) => void
   setSectionText: (sectionId: SectionId, text: string) => void
+
+  // variants
+  createVariant: (name: string) => VariantId
+  duplicateVariant: (sourceId: VariantId, name: string) => VariantId
+  renameVariant: (id: VariantId, name: string) => void
+  deleteVariant: (id: VariantId) => void
 }
 
 /**
@@ -111,6 +118,37 @@ export function createEditorStore(initial: Workspace) {
       set((state) => ({ workspace: applyEntryCommand(state.workspace, { type: 'setBasics', basics }) })),
     setSectionText: (sectionId, text) =>
       set((state) => ({ workspace: applyEntryCommand(state.workspace, { type: 'setSectionText', sectionId, text }) })),
+
+    createVariant: (name) => {
+      const id = newVariantId()
+      const createdAt = new Date().toISOString()
+      set((state) => ({
+        workspace: applyVariantCommand(state.workspace, { type: 'createVariant', id, name, createdAt }),
+      }))
+      return id
+    },
+    duplicateVariant: (sourceId, name) => {
+      const id = newVariantId()
+      const createdAt = new Date().toISOString()
+      set((state) => ({
+        workspace: applyVariantCommand(state.workspace, {
+          type: 'duplicateVariant',
+          id,
+          name,
+          sourceId,
+          createdAt,
+        }),
+      }))
+      return id
+    },
+    renameVariant: (id, name) => {
+      const updatedAt = new Date().toISOString()
+      set((state) => ({
+        workspace: applyVariantCommand(state.workspace, { type: 'renameVariant', id, name, updatedAt }),
+      }))
+    },
+    deleteVariant: (id) =>
+      set((state) => ({ workspace: applyVariantCommand(state.workspace, { type: 'deleteVariant', id }) })),
   }))
 }
 

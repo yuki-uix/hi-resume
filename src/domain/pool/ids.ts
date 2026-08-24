@@ -1,4 +1,5 @@
 import type { BulletId, EntryId, SectionId } from './types'
+import type { VariantId } from '../composition/types'
 
 /**
  * ID generation and branding.
@@ -42,6 +43,7 @@ export const ID_PREFIX = {
   section: 'sec_',
   entry: 'ent_',
   bullet: 'bul_',
+  variant: 'var_',
 } as const
 
 export function newSectionId(): SectionId {
@@ -54,6 +56,10 @@ export function newEntryId(): EntryId {
 
 export function newBulletId(): BulletId {
   return `${ID_PREFIX.bullet}${randomToken()}` as BulletId
+}
+
+export function newVariantId(): VariantId {
+  return `${ID_PREFIX.variant}${randomToken()}` as VariantId
 }
 
 /**

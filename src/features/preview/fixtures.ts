@@ -232,6 +232,46 @@ export function fixtureCustom(): Workspace {
 }
 
 // ---------------------------------------------------------------------------
+// variants — the base fixture plus two variants whose *partial* compositions
+// differ from the master, so the e2e suite can switch to a target that actually
+// renders differently from the master. `var_backend` hides the project section;
+// `var_frontend` hides the skill section. Every variant stores only the keys it
+// changed, so these are partial `visibleSections` overrides, not full copies.
+// ---------------------------------------------------------------------------
+
+export const VARIANT_BACKEND_ID = 'var_backend'
+export const VARIANT_FRONTEND_ID = 'var_frontend'
+
+export function fixtureVariants(): Workspace {
+  const ws = createWorkspace()
+  ws.variants = [
+    {
+      id: VARIANT_BACKEND_ID,
+      name: '后端侧重',
+      composition: {
+        visibleSections: [SECTION.summary, SECTION.work, SECTION.skill],
+      },
+      textOverrides: {},
+      application: { status: 'draft', events: [] },
+      createdAt: '2026-08-24T00:00:00.000Z',
+      updatedAt: '2026-08-24T00:00:00.000Z',
+    },
+    {
+      id: VARIANT_FRONTEND_ID,
+      name: '前端侧重',
+      composition: {
+        visibleSections: [SECTION.summary, SECTION.work, SECTION.project],
+      },
+      textOverrides: {},
+      application: { status: 'draft', events: [] },
+      createdAt: '2026-08-24T00:00:00.000Z',
+      updatedAt: '2026-08-24T00:00:00.000Z',
+    },
+  ]
+  return ws
+}
+
+// ---------------------------------------------------------------------------
 // text-undefined — a text-layout section whose body is missing. Its title must
 // still render, with an empty body.
 // ---------------------------------------------------------------------------
@@ -285,6 +325,7 @@ export const FIXTURES: Record<string, () => Workspace> = {
   custom: fixtureCustom,
   'text-undefined': fixtureTextUndefined,
   'bullets-200': fixtureBullets200,
+  variants: fixtureVariants,
 }
 
 export { ENTRY, SECTION }

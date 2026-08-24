@@ -1,0 +1,59 @@
+/* The left-column variant switcher. Lives in `.sections-sidebar` (a non-measurer
+ * sibling of the preview), so it may set its own typography without shifting the
+ * pagination measurer — same rule as the rest of the sidebar. */
+
+.variant-switcher {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e4e8;
+}
+
+.variant-switcher__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: #555;
+}
+
+.variant-switcher__select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #c6cad1;
+  border-radius: 5px;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.variant-switcher__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.variant-switcher__actions button {
+  flex: 1 1 auto;
+  padding: 4px 8px;
+  font-size: 11px;
+  border: 1px solid #c6cad1;
+  background: #f7f8fa;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #1a1a1a;
+}
+
+.variant-switcher__actions button:hover:not(:disabled) {
+  background: #eceef1;
+}
+
+.variant-switcher__actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.variant-switcher__actions button[data-testid='delete-variant'] {
+  color: #b3241c;
+  border-color: #e0b6b3;
+}

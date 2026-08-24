@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ID_PREFIX, asBulletId, asEntryId, asSectionId, newBulletId, newEntryId, newSectionId } from './ids'
+import {
+  ID_PREFIX,
+  asBulletId,
+  asEntryId,
+  asSectionId,
+  newBulletId,
+  newEntryId,
+  newSectionId,
+  newVariantId,
+} from './ids'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -11,7 +20,8 @@ describe('id generation', () => {
     expect(newSectionId().startsWith('sec_')).toBe(true)
     expect(newEntryId().startsWith('ent_')).toBe(true)
     expect(newBulletId().startsWith('bul_')).toBe(true)
-    expect(ID_PREFIX).toEqual({ section: 'sec_', entry: 'ent_', bullet: 'bul_' })
+    expect(newVariantId().startsWith('var_')).toBe(true)
+    expect(ID_PREFIX).toEqual({ section: 'sec_', entry: 'ent_', bullet: 'bul_', variant: 'var_' })
   })
 
   it('never repeats an id', () => {
