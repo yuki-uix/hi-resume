@@ -7,7 +7,8 @@
 #
 # API key 从主仓库根目录的 .env.local 读取（DEEPSEEK_API_KEY=...）。
 # 该文件被 .gitignore 的 .env.* 覆盖，不会进版本库。
-# 本脚本只把它传给子进程的环境变量，不打印、不写入日志。
+# 本脚本只把它传给子进程的环境变量，不打印、不写入日志，
+# 并且用 export 而非 `env VAR=value` 传递，避免它出现在 `ps` 可见的 argv 里。
 #
 # 可选覆盖：
 #   DEEPSEEK_BASE_URL   默认 https://api.deepseek.com/anthropic
@@ -108,10 +109,23 @@ fi
 set +e
 (
   cd "$WORKTREE" || exit 3
+
+  # 凭据用 export 传，不用 `env VAR=value`。
+  #
+  # `env ANTHROPIC_AUTH_TOKEN=sk-... cmd` 会把值放进 env 自己的 argv，于是
+  # 这台机器上任何 `ps` / `pgrep -fl` 都能读到明文 key —— 2026-08-24 的一次
+  # 进程排查就这样把 key 打进了终端。export 之后它只在进程环境里，不进 argv。
+  #
+  # 诚实说明残留风险：进程环境在 macOS 上仍可被**同一用户**通过 `ps -E` 读到。
+  # 这个改动消除的是默认 ps 输出、pgrep、截屏和屏幕共享这几条常见暴露面，
+  # 不是把凭据变成不可读。要真正隔离得靠文件描述符传递，而 claude CLI 不支持。
+  export ANTHROPIC_BASE_URL="$BASE_URL"
+  export ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY"
+  export ANTHROPIC_MODEL="$MODEL"
+
+  # `env $UNSET_ARGS` 仍然用来剥离 CLAUDE_* ——它继承上面 export 的变量，
+  # 而 -u 参数本身不含任何秘密。
   $KEEP_AWAKE env $UNSET_ARGS \
-    ANTHROPIC_BASE_URL="$BASE_URL" \
-    ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY" \
-    ANTHROPIC_MODEL="$MODEL" \
     claude -p "$(cat "$PROMPT")" \
       --append-system-prompt "$ROLE_NOTE" \
       --output-format stream-json --verbose \
