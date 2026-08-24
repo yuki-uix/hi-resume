@@ -14,9 +14,12 @@ import {
 } from '@dnd-kit/sortable'
 import type { CSSProperties } from 'react'
 
+import type { TextOverrides } from '../../../domain/composition/types'
 import type { Bullet, BulletId, Entry, EntryId, SectionId } from '../../../domain/pool/types'
+import { OverrideDot } from '../OverrideDot'
 import { useEditorStore } from '../editor-store-context'
 import { useEditorComposition } from '../use-editor-composition'
+import { useTextOverrides } from '../use-text-overrides'
 
 /**
  * The entries of one list-shaped section. The *candidates* are the master's
@@ -25,10 +28,14 @@ import { useEditorComposition } from '../use-editor-composition'
  * includes it (unchecked = "this resume drops this entry"). The master's own
  * selection is the same list, so the checkboxes work there too.
  *
- * Content (titles, text, adding/removing items) is master-only; on a variant the
- * rows are read-only and only the checkboxes and (on the master) drag handles
- * are live. Order comes from `entrySelection[sectionId]` / `bulletSelection[id]`
- * — the same ID lists the preview renders.
+ * Content (titles, text, adding/removing items) is master-only: on the master
+ * the title / subtitle / period / bullet fields edit the pool. On a variant the
+ * title and bullet text are instead *text overrides* — they edit the variant's
+ * `textOverrides`, never the shared pool — while subtitle stays read-only (see
+ * `VariantEntryFields`) and add / remove / reorder stays master-only.
+ *
+ * Order comes from `entrySelection[sectionId]` / `bulletSelection[id]` — the
+ * same ID lists the preview renders.
  *
  * The editor's anchors deliberately use `data-entry-edit-id` /
  * `data-bullet-edit-id` (not `data-entry-id` / `data-bullet-id`), so they can
@@ -45,6 +52,7 @@ export function EntryList({
   const workspace = store((state) => state.workspace)
   const target = store((state) => state.target)
   const composition = useEditorComposition()
+  const overrides = useTextOverrides()
   const editable = target.kind === 'master'
 
   const entries = (workspace.master.entrySelection[sectionId] ?? [])
@@ -78,6 +86,7 @@ export function EntryList({
               entry={entry}
               selected={selectedIds.includes(entry.id)}
               editable={editable}
+              overrides={overrides}
               onDeleteEntry={onDeleteEntry}
             />
           ))}
@@ -102,12 +111,14 @@ function EntryRow({
   entry,
   selected,
   editable,
+  overrides,
   onDeleteEntry,
 }: {
   sectionId: SectionId
   entry: Entry
   selected: boolean
   editable: boolean
+  overrides: TextOverrides
   onDeleteEntry: (id: EntryId) => void
 }) {
   const store = useEditorStore()
@@ -154,26 +165,26 @@ function EntryRow({
           />
           <span className="entry-row__toggle-label">包含</span>
         </label>
-        {editable ? (
+        {editable && (
           <span className="entry-row__delete">
             <button type="button" data-testid="delete-entry" onClick={() => onDeleteEntry(entry.id)}>
               删除
             </button>
           </span>
-        ) : (
-          <span className="entry-row__readonly-title" title={entry.title}>
-            {entry.title}
-          </span>
         )}
       </div>
 
-      {editable && <EntryFields entry={entry} />}
-      <BulletList entry={entry} editable={editable} />
+      {editable ? (
+        <EntryFields entry={entry} />
+      ) : (
+        <VariantEntryFields entry={entry} overrides={overrides} />
+      )}
+      <BulletList entry={entry} editable={editable} overrides={overrides} />
     </li>
   )
 }
 
-/** Title / subtitle / period, edited field by field. */
+/** Title / subtitle / period, edited field by field on the master. */
 function EntryFields({ entry }: { entry: Entry }) {
   const store = useEditorStore()
 
@@ -239,8 +250,54 @@ function EntryFields({ entry }: { entry: Entry }) {
   )
 }
 
+/**
+ * A variant's entry text fields. The title edits `textOverrides[entryId]`; the
+ * subtitle is *not* overridable — `TextOverrides` maps an id to a single string
+ * and that slot is the title — so it is shown greyed out rather than looking
+ * editable. The period is a structured field and is left off here (it is not
+ * overridable either).
+ */
+function VariantEntryFields({ entry, overrides }: { entry: Entry; overrides: TextOverrides }) {
+  const store = useEditorStore()
+  const title = overrides[entry.id] ?? entry.title
+
+  return (
+    <div className="entry-fields">
+      <label className="entries-field">
+        <span className="entries-field__label">
+          标题
+          <OverrideDot
+            overridden={overrides[entry.id] !== undefined}
+            onRestore={() => store.getState().clearTextOverride(entry.id)}
+            restoreLabel={`恢复「${entry.title}」的标题继承`}
+          />
+        </span>
+        <input
+          className="entries-field__input"
+          data-testid="entry-title"
+          value={title}
+          onChange={(event) => store.getState().setTextOverride(entry.id, event.target.value)}
+        />
+      </label>
+      <label className="entries-field entries-field--readonly">
+        <span className="entries-field__label">
+          副标题
+          <span className="entries-field__hint">本版本不可改写</span>
+        </span>
+        <input
+          className="entries-field__input"
+          data-testid="entry-subtitle"
+          value={entry.subtitle ?? ''}
+          placeholder="公司 / 组织"
+          disabled
+        />
+      </label>
+    </div>
+  )
+}
+
 /** The bullets of one entry, drag-sortable within their own nested context. */
-function BulletList({ entry, editable }: { entry: Entry; editable: boolean }) {
+function BulletList({ entry, editable, overrides }: { entry: Entry; editable: boolean; overrides: TextOverrides }) {
   const store = useEditorStore()
   const workspace = store((state) => state.workspace)
   const composition = useEditorComposition()
@@ -276,6 +333,7 @@ function BulletList({ entry, editable }: { entry: Entry; editable: boolean }) {
               entryId={entry.id}
               selected={selectedIds.includes(bullet.id)}
               editable={editable}
+              overrides={overrides}
             />
           ))}
         </ul>
@@ -299,16 +357,23 @@ function BulletRow({
   entryId,
   selected,
   editable,
+  overrides,
 }: {
   bullet: Bullet
   entryId: EntryId
   selected: boolean
   editable: boolean
+  overrides: TextOverrides
 }) {
   const store = useEditorStore()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: bullet.id,
   })
+
+  // On a variant the bullet text is an override; on the master it edits the pool.
+  const isVariant = !editable
+  const value = isVariant ? (overrides[bullet.id] ?? bullet.text) : bullet.text
+  const overridden = isVariant && overrides[bullet.id] !== undefined
 
   const style: CSSProperties = {
     transform: transform
@@ -347,18 +412,25 @@ function BulletRow({
           aria-label={`包含「${bullet.text}」`}
         />
       </label>
-      {editable ? (
-        <textarea
-          className="bullet-row__text"
-          data-testid="bullet-text"
-          rows={2}
-          value={bullet.text}
-          placeholder="bullet 内容"
-          onChange={(event) => store.getState().setBulletText(bullet.id, event.target.value)}
+      {isVariant && (
+        <OverrideDot
+          overridden={overridden}
+          onRestore={() => store.getState().clearTextOverride(bullet.id)}
+          restoreLabel={`恢复「${bullet.text}」的 bullet 继承`}
         />
-      ) : (
-        <span className="bullet-row__readonly-text">{bullet.text}</span>
       )}
+      <textarea
+        className="bullet-row__text"
+        data-testid="bullet-text"
+        rows={2}
+        value={value}
+        placeholder="bullet 内容"
+        onChange={(event) =>
+          editable
+            ? store.getState().setBulletText(bullet.id, event.target.value)
+            : store.getState().setTextOverride(bullet.id, event.target.value)
+        }
+      />
       {editable && (
         <button
           type="button"
